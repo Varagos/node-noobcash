@@ -3,6 +3,7 @@ import { Transaction } from '.';
 
 export default class Block {
   // one time use random number
+  // https://www.investopedia.com/terms/n/nonce.asp
   public nonce = Math.round(Math.random() * 999999999);
   constructor(
     public prevHash: string | null, // only genesis block can have null value
