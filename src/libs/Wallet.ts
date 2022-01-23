@@ -23,16 +23,24 @@ export default class Wallet {
   }
 
   sendMoney(amount: number, payeePublicKey: string) {
-    const transaction = new Transaction(amount, this.publicKey, payeePublicKey);
+    const transaction = new Transaction(this.publicKey, payeePublicKey, amount);
+    const signature = this.signTransaction(transaction);
+    // Chain.instance.addBlock(transaction, this.publicKey, signature);
+    Chain.instance.addTransaction(transaction, this.publicKey, signature);
+  }
 
-    /**
-     * (sign the hash with our private key,
-     * can be verified by others with our pk)
-     */
+  /**
+   * (sign the hash with our private key,
+   * can be verified by others with our pk)
+   */
+  private signTransaction(transaction: Transaction): Buffer {
     const sign = crypto.createSign('SHA256');
     sign.update(transaction.toString()).end();
 
     const signature = sign.sign(this.privateKey);
-    Chain.instance.addBlock(transaction, this.publicKey, signature);
+    return signature;
   }
+
+  // TODO
+  // broadCastTransaction() {}
 }
