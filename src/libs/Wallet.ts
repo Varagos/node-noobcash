@@ -22,8 +22,8 @@ export default class Wallet {
     this.publicKey = keypair.publicKey;
   }
 
-  sendMoney(amount: number, payeePublicKey: string) {
-    const transaction = new Transaction(this.publicKey, payeePublicKey, amount);
+  sendMoney(amount: number, receiverAddress: string) {
+    const transaction = new Transaction(this.publicKey, receiverAddress, amount);
     const signature = this.signTransaction(transaction);
     // Chain.instance.addBlock(transaction, this.publicKey, signature);
     Chain.instance.addTransaction(transaction, this.publicKey, signature);

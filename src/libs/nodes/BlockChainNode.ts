@@ -2,7 +2,7 @@ import net from 'net';
 import { Chain } from '..';
 import { nodeInfo } from './types';
 import JsonSocket from 'json-socket';
-import { handleError } from '../../utils/errors';
+import { handleError } from '../../utils/sockets';
 
 /**
  * A node has a wallet-1 pk

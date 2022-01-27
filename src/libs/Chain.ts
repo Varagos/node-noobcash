@@ -75,14 +75,14 @@ export default class Chain {
   /**
    * Verifies the signature of the transaction
    * @param transaction
-   * @param senderPublicKey
+   * @param senderAddress
    * @param signature
    */
-  verifyTransaction(transaction: Transaction, senderPublicKey: string, signature: Buffer): boolean {
+  verifyTransaction(transaction: Transaction, senderAddress: string, signature: Buffer): boolean {
     const verifier = crypto.createVerify('SHA256');
     verifier.update(transaction.toString());
 
-    const isValid = verifier.verify(senderPublicKey, signature);
+    const isValid = verifier.verify(senderAddress, signature);
     return isValid;
   }
 

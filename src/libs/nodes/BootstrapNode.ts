@@ -2,7 +2,7 @@ import BlockChainNode from './BlockChainNode';
 import net from 'net';
 import { nodeInfo } from './types';
 import JsonSocket from 'json-socket';
-import { handleError } from '../../utils/errors';
+import { handleError } from '../../utils/sockets';
 
 export default class BootstrapNode extends BlockChainNode {
   /**
