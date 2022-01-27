@@ -1,3 +1,15 @@
+## Get started
+
+```bash
+# Start bootstrap node
+yarn start:dev 0
+
+# On a new terminal, start a client node
+yarn start:dev 1
+```
+
+#### Some reading and refs
+
 the output of the cryptographic hash function is called a hash or a hash digest.  
 refs  
 [1] https://bitcoin.stackexchange.com/questions/49549/when-do-miners-stop-waiting-for-new-transactions  
@@ -6,6 +18,7 @@ refs
 [4] https://www.youtube.com/watch?v=HneatE69814
 
 <hr/>
-Cool package  
+Cool package
+
 https://www.npmjs.com/package/pm2  
 https://firecamp.io/
