@@ -1,8 +1,9 @@
 export default class Transaction {
+  // TODO add extra fields to avoid double spend
   constructor(
-    public amount: number,
-    public payer: string, // public key
-    public payee: string // public key
+    public senderAddress: string, // public key
+    public receiverAddress: string, // public key
+    public amount: number
   ) {}
 
   toString() {
