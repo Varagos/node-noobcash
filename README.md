@@ -22,3 +22,8 @@ Cool package
 
 https://www.npmjs.com/package/pm2  
 https://firecamp.io/
+
+## Videos
+
+https://www.youtube.com/watch?v=bBC-nXj3Ng4
+https://www.youtube.com/watch?v=qF7dkrce-mQ
