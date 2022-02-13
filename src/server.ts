@@ -6,14 +6,17 @@ import { Chain, Wallet } from './libs';
 import BootstrapNode from './libs/nodes/BootstrapNode';
 import BlockChainNode from './libs/nodes/BlockChainNode';
 
+// TODO only create my wallet
 const satoshi = new Wallet();
 const bob = new Wallet();
 const alice = new Wallet();
 
+Chain.initialize(satoshi.publicKey, 3);
+
 satoshi.sendMoney(50, bob.publicKey);
 bob.sendMoney(23, alice.publicKey);
-alice.sendMoney(5, bob.publicKey);
-alice.sendMoney(5, bob.publicKey);
+// alice.sendMoney(5, bob.publicKey);
+// alice.sendMoney(5, bob.publicKey);
 
 console.log(Chain.instance);
 
@@ -29,31 +32,15 @@ const config = YAML.parse(file);
 const port = index ? config.NODES[+index].port : 5000;
 // console.log(config);
 
+const bootstrapNodeInfo = config.NODES[0];
 if (+index === 0) {
   // Create Bootstrap node
-  const bootstrapNodeInfo = config.NODES[+index];
   const bootstrapNode = new BootstrapNode(bootstrapNodeInfo);
   bootstrapNode.setUpServerListener();
 } else {
   // Create Regular node
-  const bootstrapNodeInfo = config.NODES[0];
   const nodeInfo = config.NODES[+index];
   const node = new BlockChainNode(bootstrapNodeInfo, nodeInfo);
+  node.setUpServerListener();
   node.enterNodeToBlockChain();
 }
-//www.tutorialspoint.com/nodejs/nodejs_net_module.htm
-// const server = net.createServer((connection) => {
-//   console.log('client connected');
-//   connection.on('end', function () {
-//     console.log('client disconnected');
-//   });
-
-//   connection.write('Hello.');
-//   connection.on('data', (data) => {
-//     console.log(data.toString());
-//   });
-// });
-
-// server.listen(3000, () => {
-//   console.log(`Running on port ${server.address()}`);
-// });
