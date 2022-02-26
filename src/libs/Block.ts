@@ -6,7 +6,7 @@ export default class Block {
   // https://www.investopedia.com/terms/n/nonce.asp
   private _nonce?: number;
   constructor(
-    private readonly previousHash: string | null, // only genesis block can have null value
+    private readonly previousHash: string,
     private transactions: Transaction[],
     private readonly timestamp = Date.now() // Timestamp because all blocks will be placed on chronological order
   ) {}
@@ -26,6 +26,11 @@ export default class Block {
   }
 
   toString() {
+    return JSON.stringify(this);
+  }
+
+  toStringWithoutNonce() {
+    const { nonce, ...rest } = this;
     return JSON.stringify(this);
   }
 }
