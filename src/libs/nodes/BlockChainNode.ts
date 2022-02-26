@@ -99,4 +99,6 @@ export default class BlockChainNode {
   /** Receive broadcasted transaction,
    * verify it using validateTransaction
    */
+
+  // conflict-resolve https://www.geeksforgeeks.org/blockchain-resolving-conflicts/
 }
