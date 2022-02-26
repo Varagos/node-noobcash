@@ -27,7 +27,7 @@ if (index === undefined) {
   console.error('Please provide node index');
   // process.exit(1);
 }
-const file = fs.readFileSync(path.join(__dirname, '../nodes.yaml'), { encoding: 'utf-8', flag: 'r' });
+const file = fs.readFileSync(path.join(__dirname, '../group-view.yaml'), { encoding: 'utf-8', flag: 'r' });
 const config = YAML.parse(file);
 const port = index ? config.NODES[+index].port : 5000;
 // console.log(config);
