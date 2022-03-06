@@ -45,6 +45,7 @@ export default class BlockChainNode {
     });
 
     server.on('error', (err) => {
+      console.log('❌ Server error ❌', err);
       throw err;
     });
   }
@@ -128,8 +129,9 @@ export default class BlockChainNode {
     console.log('Broadcasting message to', this.nodes.length, 'nodes');
     for (const node of this.nodes) {
       // TODO broadcast to myself as well? .e.g makeTransaction
-      if (node.pk === this.myWallet.publicKey) continue;
+      // if (node.pk === this.myWallet.publicKey) continue;
       const { host, port } = node;
+      console.log('Sending message to', host, port);
       this.sendOneMessageToNode(host, port, message);
     }
   }
@@ -146,6 +148,7 @@ export default class BlockChainNode {
   }
 
   protected handleReceivedTransaction(message: NewTransactionMessage) {
+    console.log('Received transaction');
     this.chain.addTransaction(message.transaction);
   }
 }

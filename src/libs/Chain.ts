@@ -4,13 +4,15 @@ import { ChainState } from './../services/ChainState';
 import * as crypto from 'crypto';
 import { Transaction, Block } from '.';
 import { setImmediatePromise } from '../utils/sleep';
+import { Tree } from './Tree/Tree';
 
+type MinerStatus = 'idle' | 'mining';
 /**
  * Number of transactions per block
  */
 const CAPACITY = 2;
 
-const DIFFICULTY = 4;
+const DIFFICULTY = 5;
 /**
  * There can only be a single Block chain
  * so we use the Singleton pattern
@@ -19,6 +21,8 @@ export default class Chain {
   private static _instance: Chain;
 
   private chainState: ChainState;
+
+  private minerStatus: MinerStatus = 'idle';
 
   chain: Block[];
 
@@ -90,6 +94,8 @@ export default class Chain {
      * to be able to let another part of the app set a break variable
      *  */
     let blockingSince = Date.now();
+
+    const padString = ''.padStart(DIFFICULTY, '0');
     while (true) {
       const nonce = Math.random() * 10000000001;
       /**
@@ -102,9 +108,9 @@ export default class Chain {
       const attempt = hash.digest('hex');
 
       // TODO replace with difficulty variable
-      if (attempt.substring(0, 4) === '0000') {
+
+      if (attempt.substring(0, DIFFICULTY) === padString) {
         console.log(`🚀 Solved: ${nonce}, attempt: ${attempt}`);
-        // emit end-mine event
         return nonce;
       }
       /**
@@ -126,26 +132,14 @@ export default class Chain {
     console.log('Valid result of transaction is', isValid);
     if (!isValid) return;
     this.currentTransactions.push(transaction);
-    if (this.currentTransactions.length >= CAPACITY) {
-      const transactionsToBeMined = [];
-      for (let index = 0; index < CAPACITY; index++) {
-        const transaction = this.currentTransactions.shift();
-        if (transaction === undefined) throw new Error('Reached Unreachable code');
-        transactionsToBeMined.push(transaction);
-      }
-      // pass transactions to new Block
-      const newBlock = new Block(this.lastBlock.currentHash, transactionsToBeMined);
-      // we need some proof of work to prevent double spend issue
-      // mine will return proof
-      const solution = await this.mine(newBlock);
-      console.log('after mine');
-      newBlock.nonce = solution;
-      // empty transactions, TODO handle receive new transaction while mining
-      this.currentTransactions = [];
-      this.chain.push(newBlock);
-    }
+    await this.checkForTransactionsToMine();
   }
 
+  /**
+   * (a) check signature
+   * (b) check UTXOs balance
+   */
+  validateTransaction() {}
   /**
    * Verifies the signature of the transaction
    * @param transaction
@@ -158,6 +152,30 @@ export default class Chain {
 
     const isValid = verifier.verify(senderAddress, transaction.signature);
     return isValid;
+  }
+
+  private async checkForTransactionsToMine() {
+    if (this.currentTransactions.length >= CAPACITY && this.minerStatus !== 'mining') {
+      this.minerStatus = 'mining';
+      const transactionsToBeMined = [];
+      for (let index = 0; index < CAPACITY; index++) {
+        const transaction = this.currentTransactions.shift();
+        if (transaction === undefined) throw new Error('Reached Unreachable code');
+        transactionsToBeMined.push(transaction);
+      }
+      // pass transactions to new Block
+      const newBlock = new Block(this.lastBlock.currentHash, transactionsToBeMined);
+      // we need some proof of work to prevent double spend issue
+      // mine will return proof
+      const solution = await this.mine(newBlock);
+      newBlock.nonce = solution;
+      this.chain.push(newBlock);
+
+      this.minerStatus = 'idle';
+      // TODO emit end-mine event
+      // TODO check for remaining transactions to mine
+      this.checkForTransactionsToMine();
+    }
   }
 
   // TODO checkValidity function for received blocks
@@ -235,6 +253,13 @@ export default class Chain {
    * γιατί το πεδίο previous_hash δεν ισούται με το hash του προηγούμενου block. Αυτό μπορεί να σημαίνει
    * ότι έχει δημιουργηθεί κάποια διακλάδωση, η οποία πρέπει να επιλυθεί. Ο κόμβος ρωτάει τους
    * υπόλοιπους για το μήκος του blockchain και επιλέγει να υιοθετήσει αυτό με το μεγαλύτερο μήκος.
+   * **************************************
+   * Σε περίπτωση που 2 ή περισσότεροι miners κάνουν ταυτόχρονα mine ένα block, οι παραλήπτες
+   * των διαφορετικών αυτών blocks προσθέτουν στην αλυσίδα τους το πρώτο block που
+   * λαμβάνουν. Αυτό μπορεί να οδηγήσει σε 2 ή περισσότερες διακλαδώσεις της αλυσίδας. Για να
+   * καταλήξουν τελικά όλοι οι κόμβοι με την ίδια αλυσίδα του blockchain, τρέχουν τον αλγόριθμο
+   * consensus, σύμφωνα με τον οποίον σε περίπτωση conflict υιοθετούν την αλυσίδα με το
+   * μεγαλύτερο μέγεθος.
    */
   // TODO resolve-conflict
 }

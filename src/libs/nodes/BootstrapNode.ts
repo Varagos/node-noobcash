@@ -39,7 +39,7 @@ export default class BootstrapNode extends Node {
         if (this.isFinalNode(nodeIndex)) {
           console.log('all nodes entered!');
           setTimeout(this.broadcastNodesInfo.bind(this), 1000);
-          this.transferCoinsToNodes();
+          setTimeout(this.transferCoinsToNodes.bind(this), 5000);
         }
         break;
       case CODES.NEW_TRANSACTION:
@@ -61,22 +61,9 @@ export default class BootstrapNode extends Node {
   }
 
   private transferCoinsToNodes() {
-    const { host, port } = this.myInfo;
-    const transaction = this.myWallet.makeTransaction(100, this.nodes[1].pk);
-
-    const message: NewTransactionMessage = {
-      code: CODES.NEW_TRANSACTION,
-      transaction,
-    };
-    this.sendOneMessageToNode(host, port, message);
-
-    const transaction2 = this.myWallet.makeTransaction(100, this.nodes[2].pk);
-
-    const message2: NewTransactionMessage = {
-      code: CODES.NEW_TRANSACTION,
-      transaction: transaction2,
-    };
-    this.sendOneMessageToNode(host, port, message2);
+    for (const node of this.nodes.slice(1)) {
+      this.broadcastTransaction(node.pk, 100);
+    }
   }
 
   private isFinalNode = (nodeIndex: number) => nodeIndex === this.totalExpectedNodes - 1;

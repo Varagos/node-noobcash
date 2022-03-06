@@ -37,3 +37,4 @@ https://firecamp.io/
 ### Reading on UTXOs
 
 [What-the-heck-is-utxo](https://medium.com/bitbees/what-the-heck-is-utxo-ca68f2651819)
+[Are transactions signed?](https://bitcoin.stackexchange.com/questions/106039/are-utxos-signed-with-a-private-key)
