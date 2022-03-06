@@ -1,8 +1,11 @@
 ## Get started
+
 To install yarn do
+
 ```
 npm install -g yarn
 ```
+
 ```bash
 # to use yarn, npm install yarn -g
 yarn install # or npm install
@@ -24,8 +27,13 @@ refs
 [4] https://www.youtube.com/watch?v=HneatE69814
 
 https://www.youtube.com/watch?v=qF7dkrce-mQ&t=1s
+
 <hr/>
 Cool package
 
 https://www.npmjs.com/package/pm2  
 https://firecamp.io/
+
+### Reading on UTXOs
+
+[What-the-heck-is-utxo](https://medium.com/bitbees/what-the-heck-is-utxo-ca68f2651819)
