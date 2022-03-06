@@ -1,4 +1,6 @@
+import { transaction } from './../../../cli-client/src/commands/transaction';
 import Chain from '../Chain';
+import Transaction from '../Transaction';
 
 export type nodeAddressInfo = {
   host: string;
@@ -8,14 +10,10 @@ export type nodeInfo = nodeAddressInfo & {
   pk: string;
 };
 
-export enum MESSAGE_TYPES {
-  BOOTSTRAP = 'bootstrap',
-  BROADCAST = 'broadcast',
-}
-
 export enum CODES {
   REGISTER = 'register',
   INITIALIZE_CHAIN = 'initializeChain',
+  NEW_TRANSACTION = 'newTransaction',
 }
 
 // Have a type broacast / bootstrap
@@ -30,4 +28,9 @@ export type InitializeChainMessage = {
   blockChain: Chain;
 };
 
-export type MessageType = RegisterNodeMessage | InitializeChainMessage;
+export type NewTransactionMessage = {
+  code: CODES.NEW_TRANSACTION;
+  transaction: Transaction;
+};
+
+export type MessageType = RegisterNodeMessage | InitializeChainMessage | NewTransactionMessage;

@@ -1,6 +1,6 @@
 import net from 'net';
 import { Chain, Wallet } from '..';
-import { nodeInfo, RegisterNodeMessage, nodeAddressInfo, MESSAGE_TYPES, CODES, MessageType } from './types';
+import { nodeInfo, RegisterNodeMessage, nodeAddressInfo, CODES, MessageType, NewTransactionMessage } from './types';
 import JsonSocket from 'json-socket';
 import { handleError } from '../../utils/sockets';
 import { ChainState } from '../../services/ChainState';
@@ -97,6 +97,10 @@ export default class BlockChainNode {
         if (!chainIsValid) throw new Error('Cannot validate received chain');
         this.chain = chain;
         console.log('validated chain!');
+        break;
+      case CODES.NEW_TRANSACTION:
+        this.handleReceivedTransaction(message);
+        break;
       default:
         throw new Error(`unknown command ${message.code}`);
     }
@@ -110,8 +114,13 @@ export default class BlockChainNode {
 
   // conflict-resolve https://www.geeksforgeeks.org/blockchain-resolving-conflicts/
 
-  protected makeTransaction(receiverAddress: string, amount: number) {
-    this.myWallet.sendMoney(amount, receiverAddress);
+  protected broadcastTransaction(receiverAddress: string, amount: number) {
+    const transaction = this.myWallet.makeTransaction(amount, receiverAddress);
+    const message: NewTransactionMessage = {
+      code: CODES.NEW_TRANSACTION,
+      transaction,
+    };
+    this.broadcastMessage(message);
   }
 
   // sends to each node, info of all Nodes
@@ -134,5 +143,9 @@ export default class BlockChainNode {
     socket.on('error', (error) => {
       console.error(error);
     });
+  }
+
+  protected handleReceivedTransaction(message: NewTransactionMessage) {
+    this.chain.addTransaction(message.transaction);
   }
 }

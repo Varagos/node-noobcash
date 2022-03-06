@@ -24,7 +24,7 @@ export default class Transaction {
 
   public transactionOutputs: TransactionOutput[] = [];
 
-  private _signature?: Buffer;
+  private _signature?: string;
 
   constructor(
     public senderAddress: string, // public key
@@ -34,6 +34,7 @@ export default class Transaction {
 
   toString() {
     const { senderAddress, receiverAddress, amount } = this;
+    console.log('transaction.toString called', this);
     return JSON.stringify({ senderAddress, receiverAddress, amount });
   }
 
@@ -55,12 +56,13 @@ export default class Transaction {
   }
 
   set signature(sig: Buffer) {
-    this._signature = sig;
+    // this._signature = sig;
+    this._signature = sig.toString('base64');
   }
 
   get signature(): Buffer {
     if (this._signature === undefined) throw new Error(`No signature for transaction ${this.toString()}`);
-    return this._signature;
+    return Buffer.from(this._signature, 'base64');
   }
 
   public consumeOldUTXOs(oldUTXOs: TransactionOutput[]) {

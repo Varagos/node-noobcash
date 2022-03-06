@@ -1,6 +1,6 @@
 import Node from './Node';
 import net from 'net';
-import { nodeInfo, MessageType, nodeAddressInfo, CODES, InitializeChainMessage, MESSAGE_TYPES } from './types';
+import { nodeInfo, MessageType, nodeAddressInfo, CODES, InitializeChainMessage, NewTransactionMessage } from './types';
 import JsonSocket from 'json-socket';
 import { handleError } from '../../utils/sockets';
 import { Chain } from '..';
@@ -39,7 +39,11 @@ export default class BootstrapNode extends Node {
         if (this.isFinalNode(nodeIndex)) {
           console.log('all nodes entered!');
           setTimeout(this.broadcastNodesInfo.bind(this), 1000);
+          this.transferCoinsToNodes();
         }
+        break;
+      case CODES.NEW_TRANSACTION:
+        this.handleReceivedTransaction(message);
         break;
       default:
         throw new Error(`unknown command ${message.code}`);
@@ -54,6 +58,25 @@ export default class BootstrapNode extends Node {
       blockChain: this.chain,
     };
     this.broadcastMessage(msg);
+  }
+
+  private transferCoinsToNodes() {
+    const { host, port } = this.myInfo;
+    const transaction = this.myWallet.makeTransaction(100, this.nodes[1].pk);
+
+    const message: NewTransactionMessage = {
+      code: CODES.NEW_TRANSACTION,
+      transaction,
+    };
+    this.sendOneMessageToNode(host, port, message);
+
+    const transaction2 = this.myWallet.makeTransaction(100, this.nodes[2].pk);
+
+    const message2: NewTransactionMessage = {
+      code: CODES.NEW_TRANSACTION,
+      transaction: transaction2,
+    };
+    this.sendOneMessageToNode(host, port, message2);
   }
 
   private isFinalNode = (nodeIndex: number) => nodeIndex === this.totalExpectedNodes - 1;

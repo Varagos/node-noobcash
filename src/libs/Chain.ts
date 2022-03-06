@@ -118,8 +118,12 @@ export default class Chain {
     }
   }
 
-  async addTransaction(transaction: Transaction, senderPublicKey: string) {
+  async addTransaction(serializedTransaction: Transaction) {
+    const { senderAddress, receiverAddress, amount } = serializedTransaction;
+    const transaction = Object.assign(new Transaction(senderAddress, receiverAddress, amount), serializedTransaction);
+    const senderPublicKey = transaction.senderAddress;
     const isValid = this.verifyTransaction(transaction, senderPublicKey);
+    console.log('Valid result of transaction is', isValid);
     if (!isValid) return;
     this.currentTransactions.push(transaction);
     if (this.currentTransactions.length >= CAPACITY) {
