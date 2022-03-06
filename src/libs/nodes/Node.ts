@@ -3,6 +3,7 @@ import { Chain, Wallet } from '..';
 import { nodeInfo, RegisterNodeMessage, nodeAddressInfo, MESSAGE_TYPES, CODES, MessageType } from './types';
 import JsonSocket from 'json-socket';
 import { handleError } from '../../utils/sockets';
+import { ChainState } from '../../services/ChainState';
 
 /**
  * A node has a wallet-1 pk
@@ -15,8 +16,12 @@ export default class BlockChainNode {
   protected myWallet: Wallet;
 
   // TODO keep list with all nodes in order to interchange msgs
-  constructor(private readonly bootstrapNodeInfo: nodeAddressInfo, protected readonly myInfo: nodeAddressInfo) {
-    this.myWallet = new Wallet();
+  constructor(
+    private readonly bootstrapNodeInfo: nodeAddressInfo,
+    protected readonly myInfo: nodeAddressInfo,
+    protected chainState: ChainState
+  ) {
+    this.myWallet = new Wallet(chainState);
   }
 
   /** When all nodes are entered, receive broadcast from bootstrapNode,
@@ -31,7 +36,11 @@ export default class BlockChainNode {
     server.on('connection', (netSocket) => {
       const socket = new JsonSocket(netSocket);
       socket.on('message', (message) => {
-        this.handleReceivedBroadCast(message);
+        this.handleReceivedMessage(message, socket);
+      });
+
+      socket.on('end', () => {
+        console.log('client disconnected');
       });
     });
 
@@ -52,7 +61,6 @@ export default class BlockChainNode {
     socket.connect({ host, port });
     socket.on('connect', () => {
       const message: RegisterNodeMessage = {
-        type: MESSAGE_TYPES.BOOTSTRAP,
         code: CODES.REGISTER,
         host: this.myInfo.host,
         port: this.myInfo.port,
@@ -78,13 +86,13 @@ export default class BlockChainNode {
    * Receive all nodes list from bootstrap node
    * as well as blockChain so far
    */
-  protected handleReceivedBroadCast(message: MessageType) {
+  protected handleReceivedMessage(message: MessageType, socket: JsonSocket) {
     switch (message.code) {
       case CODES.INITIALIZE_CHAIN:
         const { nodes, blockChain } = message;
         this.nodes = nodes;
         console.log('Received nodes from bootstrap', this.nodes);
-        const chain = Chain.initializeReceived(blockChain);
+        const chain = Chain.initializeReceived(blockChain, this.chainState);
         const chainIsValid = chain.validateChain();
         if (!chainIsValid) throw new Error('Cannot validate received chain');
         this.chain = chain;
@@ -101,4 +109,30 @@ export default class BlockChainNode {
    */
 
   // conflict-resolve https://www.geeksforgeeks.org/blockchain-resolving-conflicts/
+
+  protected makeTransaction(receiverAddress: string, amount: number) {
+    this.myWallet.sendMoney(amount, receiverAddress);
+  }
+
+  // sends to each node, info of all Nodes
+  protected broadcastMessage(message: MessageType) {
+    console.log('Broadcasting message to', this.nodes.length, 'nodes');
+    for (const node of this.nodes) {
+      // TODO broadcast to myself as well? .e.g makeTransaction
+      if (node.pk === this.myWallet.publicKey) continue;
+      const { host, port } = node;
+      this.sendOneMessageToNode(host, port, message);
+    }
+  }
+
+  protected sendOneMessageToNode(host: string, port: number, message: MessageType) {
+    const socket = new JsonSocket(new net.Socket());
+    socket.connect(port, host);
+    socket.on('connect', () => {
+      socket.sendEndMessage(message, handleError);
+    });
+    socket.on('error', (error) => {
+      console.error(error);
+    });
+  }
 }

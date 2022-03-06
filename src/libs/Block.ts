@@ -7,7 +7,7 @@ export default class Block {
   private _nonce?: number;
   constructor(
     private readonly previousHash: string,
-    private transactions: Transaction[],
+    private _transactions: Transaction[],
     private readonly timestamp = Date.now() // Timestamp because all blocks will be placed on chronological order
   ) {}
 
@@ -25,12 +25,16 @@ export default class Block {
     this._nonce = proofOfWork;
   }
 
+  get transactions(): Transaction[] {
+    return this.transactions;
+  }
+
   toString() {
     return JSON.stringify(this);
   }
 
   toStringWithoutNonce() {
     const { nonce, ...rest } = this;
-    return JSON.stringify(this);
+    return JSON.stringify(rest);
   }
 }

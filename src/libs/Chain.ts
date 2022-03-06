@@ -1,8 +1,14 @@
+import { v4 as uuid } from 'uuid';
+import { TransactionOutput } from './Transaction';
+import { ChainState } from './../services/ChainState';
 import * as crypto from 'crypto';
 import { Transaction, Block } from '.';
 import { setImmediatePromise } from '../utils/sleep';
 
-const BLOCK_SIZE = 2;
+/**
+ * Number of transactions per block
+ */
+const CAPACITY = 2;
 
 const DIFFICULTY = 4;
 /**
@@ -11,33 +17,44 @@ const DIFFICULTY = 4;
  */
 export default class Chain {
   private static _instance: Chain;
+
+  private chainState: ChainState;
+
   chain: Block[];
+
   /**
    * list of transactions that are yet to be mined
    */
   currentTransactions: Transaction[];
 
   // Genesis block
-  private constructor(receiverAddress: string = 'satoshi', amount: number = 500) {
-    const firstTransaction = new Transaction('0', receiverAddress, amount);
-    const previousHash = '1';
-    const genesisBlock = new Block(previousHash, [firstTransaction]);
-    genesisBlock.nonce = 0;
+  private constructor(chainState: ChainState, receiverAddress?: string, amount?: number) {
+    this.chainState = chainState;
+
+    if (!receiverAddress || !amount) {
+      console.log('Initializing empty chain');
+      this.chain = [];
+      this.currentTransactions = [];
+      return;
+    }
+    const genesisBlock = this.createGenesisBlock(receiverAddress, amount);
     this.chain = [genesisBlock];
     this.currentTransactions = [];
+
+    console.log('Initializing chain with genesis Block');
   }
 
-  public static initialize(receiverAddress: string, numberOfClients: number) {
+  public static initialize(receiverAddress: string, numberOfClients: number, chainState: ChainState) {
     if (!Chain._instance) {
-      Chain._instance = new Chain(receiverAddress, 100 * numberOfClients);
+      Chain._instance = new Chain(chainState, receiverAddress, 100 * numberOfClients);
     }
     return Chain._instance;
   }
 
-  public static initializeReceived(receivedChain: Chain) {
+  public static initializeReceived(receivedChain: Chain, chainState: ChainState) {
     console.log('validating chain', typeof receivedChain);
     console.log(receivedChain);
-    Chain._instance = Object.assign(new Chain(), receivedChain);
+    Chain._instance = Object.assign(new Chain(chainState), receivedChain);
     return Chain._instance;
   }
 
@@ -47,6 +64,22 @@ export default class Chain {
 
   get lastBlock() {
     return this.chain[this.chain.length - 1];
+  }
+
+  private createGenesisBlock(receiverAddress: string, amount: number): Block {
+    const firstTransaction = new Transaction('0', receiverAddress, amount);
+    const utxo: TransactionOutput = {
+      id: uuid(),
+      transactionId: firstTransaction.transactionId,
+      recipient: receiverAddress,
+      amountTransferred: amount,
+    };
+    this.chainState.addUnspentOutput(utxo);
+
+    const previousHash = '1';
+    const genesisBlock = new Block(previousHash, [firstTransaction]);
+    genesisBlock.nonce = 0;
+    return genesisBlock;
   }
 
   async mine(block: Block) {
@@ -70,7 +103,7 @@ export default class Chain {
 
       // TODO replace with difficulty variable
       if (attempt.substring(0, 4) === '0000') {
-        console.log(`Solved: ${nonce}, attempt: ${attempt}`);
+        console.log(`🚀 Solved: ${nonce}, attempt: ${attempt}`);
         // emit end-mine event
         return nonce;
       }
@@ -89,12 +122,19 @@ export default class Chain {
     const isValid = this.verifyTransaction(transaction, senderPublicKey);
     if (!isValid) return;
     this.currentTransactions.push(transaction);
-    if (this.currentTransactions.length === BLOCK_SIZE) {
+    if (this.currentTransactions.length >= CAPACITY) {
+      const transactionsToBeMined = [];
+      for (let index = 0; index < CAPACITY; index++) {
+        const transaction = this.currentTransactions.shift();
+        if (transaction === undefined) throw new Error('Reached Unreachable code');
+        transactionsToBeMined.push(transaction);
+      }
       // pass transactions to new Block
-      const newBlock = new Block(this.lastBlock.currentHash, this.currentTransactions);
+      const newBlock = new Block(this.lastBlock.currentHash, transactionsToBeMined);
       // we need some proof of work to prevent double spend issue
       // mine will return proof
       const solution = await this.mine(newBlock);
+      console.log('after mine');
       newBlock.nonce = solution;
       // empty transactions, TODO handle receive new transaction while mining
       this.currentTransactions = [];
@@ -140,11 +180,9 @@ export default class Chain {
   }
 
   /**
-   * Gets called by newly inserted nodes
-   * validates chain and initializes it if it passes
-   * Αυτή η συνάρτηση καλείται από τους νεοεισερχόμενους κόμβους, οι οποίοι επαληθεύουν την
-   * ορθότητα του blockchain που λαμβάνουν από τον bootstrap κόμβο. Στην πραγματικότητα καλείται η
-   * validate_block για όλα τα blocks εκτός του genesis.
+   * Gets called by newly inserted nodes to
+   * validate received chain from bootstrap node
+   * In practice, it validates every block except genesis
    */
   validateChain(): boolean {
     for (let i = 1; i < this.chain.length; i++) {
@@ -154,6 +192,29 @@ export default class Chain {
       if (blockIsValid === false) return false;
     }
     return true;
+  }
+
+  /**
+   * Create UTXOs chainState for received Chain instance
+   */
+  createUTXOFromChain() {
+    this.chainState.clear();
+    const spentTXOutputIds = new Set();
+    const allOutputs = [];
+    for (const block of this.chain) {
+      for (const transaction of block.transactions) {
+        for (const input of transaction.transactionInputs) {
+          spentTXOutputIds.add(input.previousOutputId);
+        }
+        for (const output of transaction.transactionOutputs) {
+          allOutputs.push(output);
+        }
+      }
+    }
+    const unspentTXOutputs = allOutputs.filter((output) => !spentTXOutputIds.has(output.id));
+    for (const UTXO of unspentTXOutputs) {
+      this.chainState.addUnspentOutput(UTXO);
+    }
   }
 
   // TODO - Μόλις βρεθεί ο κατάλληλος nonce, ο κόμβος κάνει broadcast το επαληθευμένο block σε όλους τους

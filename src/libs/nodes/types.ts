@@ -21,12 +21,10 @@ export enum CODES {
 // Have a type broacast / bootstrap
 // and code for extra info(e.g. register, transaction, mined)
 export type RegisterNodeMessage = {
-  type: MESSAGE_TYPES.BOOTSTRAP;
   code: CODES.REGISTER;
 } & nodeInfo;
 
 export type InitializeChainMessage = {
-  type: MESSAGE_TYPES.BROADCAST;
   code: CODES.INITIALIZE_CHAIN;
   nodes: nodeInfo[];
   blockChain: Chain;

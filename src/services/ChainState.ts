@@ -13,7 +13,12 @@ export class ChainState {
     this.localStorage = {};
   }
 
-  addUnspentOutput(recipient: string, transactionOutput: TransactionOutput) {
+  clear() {
+    this.localStorage = {};
+  }
+
+  addUnspentOutput(transactionOutput: TransactionOutput) {
+    const { recipient } = transactionOutput;
     if (this.localStorage[recipient] === undefined) this.localStorage[recipient] = {};
     this.localStorage[recipient][transactionOutput.id] = transactionOutput;
   }
@@ -33,12 +38,13 @@ export class ChainState {
     const transactions: TransactionOutput[] = [];
     let totalAmount = 0;
     for (const transactionOutput of Object.values(this.localStorage[recipient])) {
+      transactions.push(transactionOutput);
+      totalAmount += transactionOutput.amountTransferred;
+
       if (totalAmount >= amountAsked) {
         transactions.map((transactionOutput) => this.removeUnspentOutput(recipient, transactionOutput.id));
         return transactions;
       }
-      transactions.push(transactionOutput);
-      totalAmount += transactionOutput.amountTransferred;
     }
     return null;
   }

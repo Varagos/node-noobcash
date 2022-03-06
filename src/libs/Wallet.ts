@@ -20,12 +20,16 @@ export default class Wallet {
   }
 
   async sendMoney(amount: number, receiverAddress: string) {
+    console.log(`Sending ${amount} 💰NBC💰 to receiver`);
     const transaction = new Transaction(this.publicKey, receiverAddress, amount);
     const unspentOutputsToBeConsumed = this.chainState.findUnspentOutputsForAmount(this.publicKey, amount);
     if (unspentOutputsToBeConsumed === null) {
-      throw new Error('Attempted to make a transaction without having necessary UTXOs');
+      console.error('Attempted to make a transaction without having necessary UTXOs');
+      console.log('I only have', this.chainState.walletBalance(this.publicKey));
+      process.exit(1);
     }
     transaction.consumeOldUTXOs(unspentOutputsToBeConsumed);
+    transaction.transactionOutputs.forEach(this.chainState.addUnspentOutput.bind(this.chainState));
 
     transaction.signature = this.signTransaction(transaction);
     // Chain.instance.addBlock(transaction, this.publicKey, signature);
