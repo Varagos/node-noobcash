@@ -88,7 +88,9 @@ export default class Chain {
     const serializedChain = this.chain;
     const castedChain = serializedChain.map((serializedBlock) => blockFromSerialized(serializedBlock));
     this.chain = castedChain;
-    // TODO also cast currentTransactions
+    // TODO  also cast currentTransactions ???
+    // if we are only interested in received chain we should perhaps clear
+    // current transactions received
   }
 
   private createGenesisBlock(receiverAddress: string, amount: number): Block {
@@ -289,6 +291,7 @@ export default class Chain {
       console.table(this.miningBlock?.transactions.map((tr) => tr.transactionId));
       console.log('I received block with transactions:');
       console.table(block.transactions.map((tr) => tr.transactionId));
+      console.log('received block has txId[0]', typeof block.transactions[0]);
       this.breakMining = true;
     } else {
       console.log('CASE2-RECEIVED FOR OLD BLOCK');

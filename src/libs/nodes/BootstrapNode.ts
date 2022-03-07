@@ -39,7 +39,7 @@ export default class BootstrapNode extends Node {
         if (this.isFinalNode(nodeIndex)) {
           console.log('all nodes entered!');
           setTimeout(this.broadcastNodesInfo.bind(this), 1000);
-          // setTimeout(this.transferCoinsToNodes.bind(this), 5000);
+          setTimeout(this.transferCoinsToNodes.bind(this), 5000);
         }
         break;
       case CODES.NEW_TRANSACTION:

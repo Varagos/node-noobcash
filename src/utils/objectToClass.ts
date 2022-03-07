@@ -3,10 +3,10 @@ import { transaction } from './../../cli-client/src/commands/transaction';
 import { Block, Chain, Transaction } from '../libs';
 
 export const blockFromSerialized = (serializedBlock: Block): Block => {
-  const { previousHash, transactions: serializedTransactions, timestamp } = serializedBlock;
+  const { previousHash, transactions, timestamp } = serializedBlock;
   // cast block
-  const transactions = serializedTransactions.map((tr) => transactionFromSerialized(tr));
   const block = Object.assign(new Block(previousHash, transactions, timestamp), serializedBlock);
+  block.transactions = transactions.map((tr) => transactionFromSerialized(tr));
   return block;
 };
 
