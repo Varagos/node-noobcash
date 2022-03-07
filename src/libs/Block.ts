@@ -7,7 +7,7 @@ export default class Block {
   private _nonce?: number;
   constructor(
     public readonly previousHash: string,
-    public _transactions: Transaction[],
+    public transactions: Transaction[],
     public readonly timestamp = Date.now() // Timestamp because all blocks will be placed on chronological order
   ) {}
 
@@ -23,10 +23,6 @@ export default class Block {
 
   set nonce(proofOfWork: number) {
     this._nonce = proofOfWork;
-  }
-
-  get transactions(): Transaction[] {
-    return this.transactions;
   }
 
   toString() {

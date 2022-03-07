@@ -1,10 +1,10 @@
+import { blockFromSerialized } from './../utils/objectToClass';
 import { v4 as uuid } from 'uuid';
 import { TransactionOutput } from './Transaction';
 import { ChainState } from './../services/ChainState';
 import * as crypto from 'crypto';
 import { Transaction, Block } from '.';
 import { setImmediatePromise } from '../utils/sleep';
-import { Tree } from './Tree/Tree';
 
 type MinerStatus = 'idle' | 'mining';
 type BroadCastBlock = (block: Block) => void;
@@ -34,6 +34,8 @@ export default class Chain {
 
   miningBlock: Block | null = null;
 
+  breakMining: boolean = false;
+
   // Genesis block
   private constructor(chainState: ChainState, receiverAddress?: string, amount?: number) {
     this.chainState = chainState;
@@ -62,6 +64,10 @@ export default class Chain {
     console.log('validating chain', typeof receivedChain);
     console.log(receivedChain);
     Chain._instance = Object.assign(new Chain(chainState), receivedChain);
+
+    Chain._instance.castSerializedChain();
+    console.log(`Initializing chain with length:${Chain._instance.chain.length}`);
+    console.log(`And block hash: ${Chain._instance.lastBlock.currentHash}`);
     return Chain._instance;
   }
 
@@ -71,6 +77,18 @@ export default class Chain {
 
   get lastBlock() {
     return this.chain[this.chain.length - 1];
+  }
+
+  /**
+   * We need to cast Blocks and Transactions items of chain
+   * from objects to class instances
+   * when received as serialized from tcp streams
+   */
+  private castSerializedChain(): void {
+    const serializedChain = this.chain;
+    const castedChain = serializedChain.map((serializedBlock) => blockFromSerialized(serializedBlock));
+    this.chain = castedChain;
+    // TODO also cast currentTransactions
   }
 
   private createGenesisBlock(receiverAddress: string, amount: number): Block {
@@ -97,9 +115,10 @@ export default class Chain {
      * to be able to let another part of the app set a break variable
      *  */
     let blockingSince = Date.now();
-
     const padString = ''.padStart(DIFFICULTY, '0');
-    while (true) {
+
+    this.breakMining = false;
+    while (!this.breakMining) {
       const nonce = Math.random() * 10000000001;
       /**
        *  MD5 is similar to sha256, but it's
@@ -125,6 +144,8 @@ export default class Chain {
         blockingSince = Date.now();
       }
     }
+    console.log('My mining was interrupted...not cool but ok');
+    this.breakMining = false;
   }
 
   async addTransaction(serializedTransaction: Transaction, broadcastBlock: BroadCastBlock) {
@@ -248,10 +269,34 @@ export default class Chain {
   }
 
   handleReceivedBlock(serializedBlock: Block) {
-    const { previousHash, transactions, timestamp } = serializedBlock;
-    const block = Object.assign(new Block(previousHash, transactions, timestamp), serializedBlock);
+    const block = blockFromSerialized(serializedBlock);
+    const { previousHash } = block;
+
     const previousBlock = this.chain.find((block) => block.currentHash === previousHash);
-    console.log('Previous block for received block:', previousBlock);
+    const previousBlockIndex = this.chain.findIndex((block) => block.currentHash === previousHash);
+    if (previousBlockIndex === -1) {
+      console.log("CASE0-I don't have previousBlock of received block");
+      return this.resolveConflict(block);
+    }
+    if (previousBlockIndex === this.chain.length - 1) {
+      /**
+       * We received a block that can be attached to our latest block
+       */
+      // STOP MY MINING - CHECK TRANSACTIONS OF RECEIVED - THE ONES I WAS MINING
+      // PUT DIFF ON CURRENT_TRANSACTIONS AND WORK LATER ON THEM
+      console.log('CASE1-RECEIVED VALID BLOCK');
+      console.log('I am mining transactions:');
+      console.table(this.miningBlock?.transactions.map((tr) => tr.transactionId));
+      console.log('I received block with transactions:');
+      console.table(block.transactions.map((tr) => tr.transactionId));
+      this.breakMining = true;
+    } else {
+      console.log('CASE2-RECEIVED FOR OLD BLOCK');
+      console.log(`I have ${this.chain.length} blocks in my chain`);
+      console.log(`Previous block of received block is my No:${previousBlockIndex + 1}`);
+      this.resolveConflict(block);
+    }
+    console.log('Previous block for received block:', previousBlock?.currentHash);
     // I also receive my broadcast, check if i have it and don't need to act
   }
 
@@ -274,7 +319,7 @@ export default class Chain {
    * μεγαλύτερο μέγεθος.
    */
   // TODO resolve-conflict
-  resolveConflict() {
+  resolveConflict(block: Block) {
     console.log('💢 Conflict detected');
   }
 }
