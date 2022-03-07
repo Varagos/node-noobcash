@@ -45,6 +45,9 @@ export default class BootstrapNode extends Node {
       case CODES.NEW_TRANSACTION:
         this.handleReceivedTransaction(message);
         break;
+      case CODES.BLOCK_FOUND:
+        this.handleReceivedBlock(message);
+        break;
       default:
         throw new Error(`unknown command ${message.code}`);
     }

@@ -1,9 +1,18 @@
 import net from 'net';
-import { Chain, Wallet } from '..';
-import { nodeInfo, RegisterNodeMessage, nodeAddressInfo, CODES, MessageType, NewTransactionMessage } from './types';
+import { Block, Chain, Wallet } from '..';
+import {
+  nodeInfo,
+  RegisterNodeMessage,
+  nodeAddressInfo,
+  CODES,
+  MessageType,
+  NewTransactionMessage,
+  BlockMineFoundMessage,
+} from './types';
 import JsonSocket from 'json-socket';
 import { handleError } from '../../utils/sockets';
 import { ChainState } from '../../services/ChainState';
+import { Console } from 'console';
 
 /**
  * A node has a wallet-1 pk
@@ -102,6 +111,9 @@ export default class BlockChainNode {
       case CODES.NEW_TRANSACTION:
         this.handleReceivedTransaction(message);
         break;
+      case CODES.BLOCK_FOUND:
+        this.handleReceivedBlock(message);
+        break;
       default:
         throw new Error(`unknown command ${message.code}`);
     }
@@ -120,6 +132,15 @@ export default class BlockChainNode {
     const message: NewTransactionMessage = {
       code: CODES.NEW_TRANSACTION,
       transaction,
+    };
+    this.broadcastMessage(message);
+  }
+
+  protected broadcastBlock(block: Block) {
+    console.log('Broadcasting block!');
+    const message: BlockMineFoundMessage = {
+      code: CODES.BLOCK_FOUND,
+      block,
     };
     this.broadcastMessage(message);
   }
@@ -149,6 +170,11 @@ export default class BlockChainNode {
 
   protected handleReceivedTransaction(message: NewTransactionMessage) {
     console.log('Received transaction');
-    this.chain.addTransaction(message.transaction);
+    this.chain.addTransaction(message.transaction, this.broadcastBlock.bind(this));
+  }
+
+  protected handleReceivedBlock(message: BlockMineFoundMessage) {
+    console.log('Received block');
+    this.chain.handleReceivedBlock(message.block);
   }
 }

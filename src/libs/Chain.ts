@@ -7,6 +7,7 @@ import { setImmediatePromise } from '../utils/sleep';
 import { Tree } from './Tree/Tree';
 
 type MinerStatus = 'idle' | 'mining';
+type BroadCastBlock = (block: Block) => void;
 /**
  * Number of transactions per block
  */
@@ -30,6 +31,8 @@ export default class Chain {
    * list of transactions that are yet to be mined
    */
   currentTransactions: Transaction[];
+
+  miningBlock: Block | null = null;
 
   // Genesis block
   private constructor(chainState: ChainState, receiverAddress?: string, amount?: number) {
@@ -124,7 +127,7 @@ export default class Chain {
     }
   }
 
-  async addTransaction(serializedTransaction: Transaction) {
+  async addTransaction(serializedTransaction: Transaction, broadcastBlock: BroadCastBlock) {
     const { senderAddress, receiverAddress, amount } = serializedTransaction;
     const transaction = Object.assign(new Transaction(senderAddress, receiverAddress, amount), serializedTransaction);
     const senderPublicKey = transaction.senderAddress;
@@ -132,7 +135,7 @@ export default class Chain {
     console.log('Valid result of transaction is', isValid);
     if (!isValid) return;
     this.currentTransactions.push(transaction);
-    await this.checkForTransactionsToMine();
+    return this.checkForTransactionsToMine(broadcastBlock);
   }
 
   /**
@@ -154,7 +157,7 @@ export default class Chain {
     return isValid;
   }
 
-  private async checkForTransactionsToMine() {
+  private async checkForTransactionsToMine(broadcastBlock: BroadCastBlock) {
     if (this.currentTransactions.length >= CAPACITY && this.minerStatus !== 'mining') {
       this.minerStatus = 'mining';
       const transactionsToBeMined = [];
@@ -167,14 +170,19 @@ export default class Chain {
       const newBlock = new Block(this.lastBlock.currentHash, transactionsToBeMined);
       // we need some proof of work to prevent double spend issue
       // mine will return proof
+      this.miningBlock = newBlock;
       const solution = await this.mine(newBlock);
-      newBlock.nonce = solution;
-      this.chain.push(newBlock);
+      this.miningBlock = null;
+      if (solution) {
+        newBlock.nonce = solution;
+        this.chain.push(newBlock);
+        broadcastBlock(newBlock);
+      }
 
       this.minerStatus = 'idle';
       // TODO emit end-mine event
       // TODO check for remaining transactions to mine
-      this.checkForTransactionsToMine();
+      this.checkForTransactionsToMine(broadcastBlock);
     }
   }
 
@@ -239,9 +247,13 @@ export default class Chain {
     }
   }
 
-  // TODO - Μόλις βρεθεί ο κατάλληλος nonce, ο κόμβος κάνει broadcast το επαληθευμένο block σε όλους τους
-  // υπόλοιπους κόμβους.
-  // broadcastBlock() {}
+  handleReceivedBlock(serializedBlock: Block) {
+    const { previousHash, transactions, timestamp } = serializedBlock;
+    const block = Object.assign(new Block(previousHash, transactions, timestamp), serializedBlock);
+    const previousBlock = this.chain.find((block) => block.currentHash === previousHash);
+    console.log('Previous block for received block:', previousBlock);
+    // I also receive my broadcast, check if i have it and don't need to act
+  }
 
   /**
    * TODO wallet_balance()
@@ -262,4 +274,7 @@ export default class Chain {
    * μεγαλύτερο μέγεθος.
    */
   // TODO resolve-conflict
+  resolveConflict() {
+    console.log('💢 Conflict detected');
+  }
 }

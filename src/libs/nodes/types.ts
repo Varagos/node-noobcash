@@ -15,7 +15,7 @@ export enum CODES {
   REGISTER = 'register',
   INITIALIZE_CHAIN = 'initializeChain',
   NEW_TRANSACTION = 'newTransaction',
-  END_MINING = 'endMining',
+  BLOCK_FOUND = 'blockFound',
 }
 
 // Have a type broacast / bootstrap
@@ -40,9 +40,9 @@ export type NewTransactionMessage = {
  * It sets a flag to true which tells the other nodes on the network to stop mining
  * and start verifying the solution.
  */
-export type BlockMineFound = {
-  code: CODES.END_MINING;
+export type BlockMineFoundMessage = {
+  code: CODES.BLOCK_FOUND;
   block: Block;
 };
 
-export type MessageType = RegisterNodeMessage | InitializeChainMessage | NewTransactionMessage;
+export type MessageType = RegisterNodeMessage | InitializeChainMessage | NewTransactionMessage | BlockMineFoundMessage;

@@ -6,9 +6,9 @@ export default class Block {
   // https://www.investopedia.com/terms/n/nonce.asp
   private _nonce?: number;
   constructor(
-    private readonly previousHash: string,
-    private _transactions: Transaction[],
-    private readonly timestamp = Date.now() // Timestamp because all blocks will be placed on chronological order
+    public readonly previousHash: string,
+    public _transactions: Transaction[],
+    public readonly timestamp = Date.now() // Timestamp because all blocks will be placed on chronological order
   ) {}
 
   /**
