@@ -1,8 +1,8 @@
-import { blockFromSerialized } from './../utils/objectToClass';
+import * as crypto from 'crypto';
 import { v4 as uuid } from 'uuid';
+import { blockFromSerialized, transactionFromSerialized } from './../utils/objectToClass';
 import { TransactionOutput } from './Transaction';
 import { ChainState } from './../services/ChainState';
-import * as crypto from 'crypto';
 import { Transaction, Block } from '.';
 import { setImmediatePromise } from '../utils/sleep';
 
@@ -127,12 +127,8 @@ export default class Chain {
        * only 128 bits and faster to calculate
        */
       const hash = crypto.createHash('sha256');
-      hash.update((block.toString() + nonce).toString()).end();
-
+      hash.update((block.toStringWithoutNonce() + nonce).toString()).end();
       const attempt = hash.digest('hex');
-
-      // TODO replace with difficulty variable
-
       if (attempt.substring(0, DIFFICULTY) === padString) {
         console.log(`🚀 Solved: ${nonce}, attempt: ${attempt}`);
         return nonce;
@@ -151,10 +147,8 @@ export default class Chain {
   }
 
   async addTransaction(serializedTransaction: Transaction, broadcastBlock: BroadCastBlock) {
-    const { senderAddress, receiverAddress, amount } = serializedTransaction;
-    const transaction = Object.assign(new Transaction(senderAddress, receiverAddress, amount), serializedTransaction);
-    const senderPublicKey = transaction.senderAddress;
-    const isValid = this.verifyTransaction(transaction, senderPublicKey);
+    const transaction = transactionFromSerialized(serializedTransaction);
+    const isValid = this.verifyTransaction(transaction);
     console.log('Valid result of transaction is', isValid);
     if (!isValid) return;
     this.currentTransactions.push(transaction);
@@ -165,14 +159,21 @@ export default class Chain {
    * (a) check signature
    * (b) check UTXOs balance
    */
-  validateTransaction() {}
+  validateTransaction(transaction: Transaction) {
+    const isValid = this.verifyTransaction(transaction);
+    return isValid;
+
+    // TODO validate that he has sufficient UTXOs
+  }
+
   /**
    * Verifies the signature of the transaction
    * @param transaction
    * @param senderAddress
    * @param signature
    */
-  verifyTransaction(transaction: Transaction, senderAddress: string): boolean {
+  verifyTransaction(transaction: Transaction): boolean {
+    const senderAddress = transaction.senderAddress;
     const verifier = crypto.createVerify('SHA256');
     verifier.update(transaction.transactionId);
 
@@ -221,12 +222,14 @@ export default class Chain {
    * @returns
    */
   validateBlock(previousBlock: Block, currentBlock: Block): boolean {
-    console.log('validation block');
+    console.log('validating block...', currentBlock.nonce);
     const hash = crypto.createHash('sha256');
-    hash.update(currentBlock.toStringWithoutNonce()).end();
+    // console.log('currentBlock.toStringWithoutNonce()', currentBlock.toStringWithoutNonce());
+    hash.update(currentBlock.toStringWithoutNonce() + currentBlock.nonce).end();
     const hashResult = hash.digest('hex');
+    // console.log('hashResult', hashResult);
     const padString = ''.padStart(DIFFICULTY, '0');
-    console.log('padString', padString);
+    // console.log('padString', padString);
     if (hashResult.substring(0, DIFFICULTY) === padString) return true;
     // TODO (b)
     return false;
@@ -273,8 +276,18 @@ export default class Chain {
   handleReceivedBlock(serializedBlock: Block) {
     const block = blockFromSerialized(serializedBlock);
     const { previousHash } = block;
+    const blockHash = block.currentHash;
+    const blockExists = this.chain.some((someBlock) => someBlock.currentHash === blockHash);
+    if (blockExists) {
+      console.log('Received block that i already have');
+      return;
+    }
 
-    const previousBlock = this.chain.find((block) => block.currentHash === previousHash);
+    // TODO handle myReceived also(the one i broadcasted)
+    // if i already have it's hash just ignore the broadcast
+
+    // TODO validate it
+
     const previousBlockIndex = this.chain.findIndex((block) => block.currentHash === previousHash);
     if (previousBlockIndex === -1) {
       console.log("CASE0-I don't have previousBlock of received block");
@@ -286,12 +299,22 @@ export default class Chain {
        */
       // STOP MY MINING - CHECK TRANSACTIONS OF RECEIVED - THE ONES I WAS MINING
       // PUT DIFF ON CURRENT_TRANSACTIONS AND WORK LATER ON THEM
-      console.log('CASE1-RECEIVED VALID BLOCK');
-      console.log('I am mining transactions:');
-      console.table(this.miningBlock?.transactions.map((tr) => tr.transactionId));
-      console.log('I received block with transactions:');
-      console.table(block.transactions.map((tr) => tr.transactionId));
-      console.log('received block has txId[0]', typeof block.transactions[0]);
+
+      // TODO validate new block
+      // TODO update my UTXOs
+      const previousBlock = this.chain[previousBlockIndex];
+      if (!this.validateBlock(previousBlock, block)) {
+        console.error('❌Block is not valid');
+        // return;
+      }
+      this.chain.push(block);
+
+      console.log('📥CASE1-RECEIVED VALID BLOCK');
+      const minedTransactionIds = new Set(block.transactions.map((tr) => tr.transactionId));
+      if (this.miningBlock) this.currentTransactions = this.currentTransactions.concat(this.miningBlock.transactions);
+      // filter my remaining transactions
+      this.currentTransactions = this.currentTransactions.filter((tx) => !minedTransactionIds.has(tx.transactionId));
+      // when i set this flag mining stops and new mining may start
       this.breakMining = true;
     } else {
       console.log('CASE2-RECEIVED FOR OLD BLOCK');
@@ -299,8 +322,6 @@ export default class Chain {
       console.log(`Previous block of received block is my No:${previousBlockIndex + 1}`);
       this.resolveConflict(block);
     }
-    console.log('Previous block for received block:', previousBlock?.currentHash);
-    // I also receive my broadcast, check if i have it and don't need to act
   }
 
   /**
@@ -309,20 +330,9 @@ export default class Chain {
    * παραλήπτη το συγκεκριμένο wallet.
    */
 
-  /** Αυτή η συνάρτηση καλείται όταν ένα κόμβος λάβει ένα block το οποίο δεν μπορεί να κάνει validate
-   * γιατί το πεδίο previous_hash δεν ισούται με το hash του προηγούμενου block. Αυτό μπορεί να σημαίνει
-   * ότι έχει δημιουργηθεί κάποια διακλάδωση, η οποία πρέπει να επιλυθεί. Ο κόμβος ρωτάει τους
-   * υπόλοιπους για το μήκος του blockchain και επιλέγει να υιοθετήσει αυτό με το μεγαλύτερο μήκος.
-   * **************************************
-   * Σε περίπτωση που 2 ή περισσότεροι miners κάνουν ταυτόχρονα mine ένα block, οι παραλήπτες
-   * των διαφορετικών αυτών blocks προσθέτουν στην αλυσίδα τους το πρώτο block που
-   * λαμβάνουν. Αυτό μπορεί να οδηγήσει σε 2 ή περισσότερες διακλαδώσεις της αλυσίδας. Για να
-   * καταλήξουν τελικά όλοι οι κόμβοι με την ίδια αλυσίδα του blockchain, τρέχουν τον αλγόριθμο
-   * consensus, σύμφωνα με τον οποίον σε περίπτωση conflict υιοθετούν την αλυσίδα με το
-   * μεγαλύτερο μέγεθος.
-   */
   // TODO resolve-conflict
   resolveConflict(block: Block) {
     console.log('💢 Conflict detected');
+    // TODO ask remaining nodes for their chain, and keep longest valid
   }
 }

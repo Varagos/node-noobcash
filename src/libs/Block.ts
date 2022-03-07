@@ -21,8 +21,11 @@ export default class Block {
     return hash.digest('hex');
   }
 
-  set nonce(proofOfWork: number) {
+  set nonce(proofOfWork: number | undefined) {
     this._nonce = proofOfWork;
+  }
+  get nonce(): number | undefined {
+    return this._nonce;
   }
 
   toString() {
@@ -30,7 +33,7 @@ export default class Block {
   }
 
   toStringWithoutNonce() {
-    const { nonce, ...rest } = this;
+    const { _nonce, nonce, ...rest } = this;
     return JSON.stringify(rest);
   }
 }
