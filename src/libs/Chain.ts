@@ -276,11 +276,10 @@ export default class Chain {
   handleReceivedBlock(serializedBlock: Block) {
     const block = blockFromSerialized(serializedBlock);
     const { previousHash } = block;
-    const blockHash = block.currentHash;
-    const blockExists = this.chain.some((someBlock) => someBlock.currentHash === blockHash);
-    if (blockExists) {
+
+    if (this.blockExists(block)) {
       console.log('Received block that i already have');
-      return;
+      return true;
     }
 
     // TODO handle myReceived also(the one i broadcasted)
@@ -291,7 +290,7 @@ export default class Chain {
     const previousBlockIndex = this.chain.findIndex((block) => block.currentHash === previousHash);
     if (previousBlockIndex === -1) {
       console.log("CASE0-I don't have previousBlock of received block");
-      return this.resolveConflict(block);
+      return false;
     }
     if (previousBlockIndex === this.chain.length - 1) {
       /**
@@ -320,19 +319,17 @@ export default class Chain {
       console.log('CASE2-RECEIVED FOR OLD BLOCK');
       console.log(`I have ${this.chain.length} blocks in my chain`);
       console.log(`Previous block of received block is my No:${previousBlockIndex + 1}`);
-      this.resolveConflict(block);
+      return false;
     }
   }
 
+  blockExists(block: Block){
+    return this.chain.some((someBlock) => someBlock.currentHash === block.currentHash);
+
+  }
   /**
    * TODO wallet_balance()
    * Μπορούμενα βρούμε το υπόλοιπο οποιουδήποτε wallet προσθέτοντας όλα τα UTXOs που έχουν
    * παραλήπτη το συγκεκριμένο wallet.
    */
-
-  // TODO resolve-conflict
-  resolveConflict(block: Block) {
-    console.log('💢 Conflict detected');
-    // TODO ask remaining nodes for their chain, and keep longest valid
-  }
 }

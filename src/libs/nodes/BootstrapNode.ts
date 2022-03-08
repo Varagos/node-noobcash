@@ -48,6 +48,9 @@ export default class BootstrapNode extends Node {
       case CODES.BLOCK_FOUND:
         this.handleReceivedBlock(message);
         break;
+      case CODES.CHAINS_REQUEST:
+        this.handleChainsRequest();
+        break;
       default:
         throw new Error(`unknown command ${message.code}`);
     }

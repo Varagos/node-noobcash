@@ -8,6 +8,7 @@ import {
   MessageType,
   NewTransactionMessage,
   BlockMineFoundMessage,
+  ChainsRequestMessage,
 } from './types';
 import JsonSocket from 'json-socket';
 import { handleError } from '../../utils/sockets';
@@ -114,6 +115,9 @@ export default class BlockChainNode {
       case CODES.BLOCK_FOUND:
         this.handleReceivedBlock(message);
         break;
+      case CODES.CHAINS_REQUEST:
+        this.handleChainsRequest();
+        break;
       default:
         throw new Error(`unknown command ${message.code}`);
     }
@@ -144,15 +148,22 @@ export default class BlockChainNode {
     this.broadcastMessage(message);
   }
 
+  protected broadcastChainsRequest(){
+    const message: ChainsRequestMessage = {
+      code: CODES.CHAINS_REQUEST
+    };
+    this.broadcastMessage(message);
+  }
   // sends to each node, info of all Nodes
   protected broadcastMessage(message: MessageType) {
     console.log('Broadcasting message to', this.nodes.length, 'nodes');
     for (const node of this.nodes) {
       // TODO broadcast to myself as well? .e.g makeTransaction
-      // if (node.pk === this.myWallet.publicKey) continue;
-      const { host, port } = node;
-      console.log('Sending message to', host, port);
-      this.sendOneMessageToNode(host, port, message);
+      if (node.pk !== this.myWallet.publicKey){
+        const { host, port } = node;
+        console.log('Sending message to', host, port);
+        this.sendOneMessageToNode(host, port, message);
+      }
     }
   }
 
@@ -174,6 +185,19 @@ export default class BlockChainNode {
 
   protected handleReceivedBlock(message: BlockMineFoundMessage) {
     console.log('Received block');
-    this.chain.handleReceivedBlock(message.block);
+    if(!this.chain.handleReceivedBlock(message.block)){
+      this.resolveConflict(message.block);
+    }
+  }
+
+  protected handleChainsRequest() {
+    console.log('ChainsRequest');
+  }
+
+   // TODO resolve-conflict
+   protected resolveConflict(block: Block) {
+    console.log('💢 Conflict detected');
+    this.broadcastChainsRequest();
+    // TODO ask remaining nodes for their chain, and keep longest valid
   }
 }

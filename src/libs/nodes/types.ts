@@ -16,6 +16,7 @@ export enum CODES {
   INITIALIZE_CHAIN = 'initializeChain',
   NEW_TRANSACTION = 'newTransaction',
   BLOCK_FOUND = 'blockFound',
+  CHAINS_REQUEST = 'chainsRequest'
 }
 
 // Have a type broacast / bootstrap
@@ -35,6 +36,9 @@ export type NewTransactionMessage = {
   transaction: Transaction;
 };
 
+export type ChainsRequestMessage = {
+  code: CODES.CHAINS_REQUEST;
+};
 /**
  * The END_MINING event is triggered when one of the nodes successfully mine the block.
  * It sets a flag to true which tells the other nodes on the network to stop mining
@@ -45,4 +49,4 @@ export type BlockMineFoundMessage = {
   block: Block;
 };
 
-export type MessageType = RegisterNodeMessage | InitializeChainMessage | NewTransactionMessage | BlockMineFoundMessage;
+export type MessageType = RegisterNodeMessage | InitializeChainMessage | NewTransactionMessage | BlockMineFoundMessage | ChainsRequestMessage;
