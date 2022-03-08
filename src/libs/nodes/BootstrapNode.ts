@@ -67,8 +67,13 @@ export default class BootstrapNode extends Node {
 
   private transferCoinsToNodes() {
     for (const node of this.nodes.slice(1)) {
-      this.broadcastTransaction(node.pk, 100);
+      this.makeTransaction(100, node.pk);
     }
+  }
+
+  private makeTransaction(amount: number, receiverAddress: string): void{
+    const transaction = this.myWallet.makeTransaction(amount,receiverAddress);
+    this.broadcastTransaction(transaction);
   }
 
   private isFinalNode = (nodeIndex: number) => nodeIndex === this.totalExpectedNodes - 1;

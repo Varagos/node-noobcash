@@ -1,5 +1,5 @@
 import net from 'net';
-import { Block, Chain, Wallet } from '..';
+import { Block, Chain, Transaction, Wallet } from '..';
 import {
   nodeInfo,
   RegisterNodeMessage,
@@ -127,8 +127,7 @@ export default class BlockChainNode {
 
   // conflict-resolve https://www.geeksforgeeks.org/blockchain-resolving-conflicts/
 
-  protected broadcastTransaction(receiverAddress: string, amount: number) {
-    const transaction = this.myWallet.makeTransaction(amount, receiverAddress);
+  protected broadcastTransaction(transaction: Transaction) {
     const message: NewTransactionMessage = {
       code: CODES.NEW_TRANSACTION,
       transaction,
