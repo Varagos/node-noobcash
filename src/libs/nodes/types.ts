@@ -16,6 +16,9 @@ export enum CODES {
   INITIALIZE_CHAIN = 'initializeChain',
   NEW_TRANSACTION = 'newTransaction',
   BLOCK_FOUND = 'blockFound',
+  CLI_MAKE_NEW_TX = 'cliMakeTransaction',
+  CLI_VIEW_LAST_TX = 'cliViewLastTransactions',
+  CLI_SHOW_BALANCE = 'cliShowBalance',
 }
 
 // Have a type broacast / bootstrap
@@ -45,4 +48,25 @@ export type BlockMineFoundMessage = {
   block: Block;
 };
 
-export type MessageType = RegisterNodeMessage | InitializeChainMessage | NewTransactionMessage | BlockMineFoundMessage;
+export type CliNewTransactionMessage = {
+  code: CODES.CLI_MAKE_NEW_TX;
+  recipientAddress: string;
+  amount: number;
+};
+
+export type CliViewLastTransactions = {
+  code: CODES.CLI_VIEW_LAST_TX;
+};
+
+export type CliShowBalance = {
+  code: CODES.CLI_SHOW_BALANCE;
+};
+
+export type MessageType =
+  | RegisterNodeMessage
+  | InitializeChainMessage
+  | NewTransactionMessage
+  | BlockMineFoundMessage
+  | CliNewTransactionMessage
+  | CliViewLastTransactions
+  | CliShowBalance;

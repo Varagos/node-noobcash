@@ -8,11 +8,11 @@ import {
   MessageType,
   NewTransactionMessage,
   BlockMineFoundMessage,
+  CliNewTransactionMessage,
 } from './types';
 import JsonSocket from 'json-socket';
 import { handleError } from '../../utils/sockets';
 import { ChainState } from '../../services/ChainState';
-import { Console } from 'console';
 
 /**
  * A node has a wallet-1 pk
@@ -114,6 +114,15 @@ export default class BlockChainNode {
       case CODES.BLOCK_FOUND:
         this.handleReceivedBlock(message);
         break;
+      case CODES.CLI_MAKE_NEW_TX:
+        this.handleCliNewTransaction(socket, message);
+        break;
+      case CODES.CLI_VIEW_LAST_TX:
+        this.handleViewLastTransactions(socket);
+        break;
+      case CODES.CLI_SHOW_BALANCE:
+        this.handleShowBalance(socket);
+        break;
       default:
         throw new Error(`unknown command ${message.code}`);
     }
@@ -176,5 +185,23 @@ export default class BlockChainNode {
   protected handleReceivedBlock(message: BlockMineFoundMessage) {
     console.log('Received block');
     this.chain.handleReceivedBlock(message.block);
+  }
+
+  protected handleCliNewTransaction(socket: JsonSocket, message: CliNewTransactionMessage) {
+    console.log('Received new transaction command');
+    socket.sendEndMessage({ result: 'OK NEW TRANSACTION' }, handleError);
+    // TODO
+  }
+
+  protected handleViewLastTransactions(socket: JsonSocket) {
+    console.log('handle view last transactions');
+
+    socket.sendEndMessage({ result: 'OK LAST TRANSACTIONS' }, handleError);
+  }
+
+  protected handleShowBalance(socket: JsonSocket) {
+    console.log('Handle show balance');
+
+    socket.sendEndMessage({ result: 'OK SHOW BALANCE' }, handleError);
   }
 }
