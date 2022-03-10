@@ -6,9 +6,9 @@ export default class Block {
   // https://www.investopedia.com/terms/n/nonce.asp
   private _nonce?: number;
   constructor(
-    private readonly previousHash: string,
-    private transactions: Transaction[],
-    private readonly timestamp = Date.now() // Timestamp because all blocks will be placed on chronological order
+    public readonly previousHash: string,
+    public transactions: Transaction[],
+    public readonly timestamp = Date.now() // Timestamp because all blocks will be placed on chronological order
   ) {}
 
   /**
@@ -21,8 +21,11 @@ export default class Block {
     return hash.digest('hex');
   }
 
-  set nonce(proofOfWork: number) {
+  set nonce(proofOfWork: number | undefined) {
     this._nonce = proofOfWork;
+  }
+  get nonce(): number | undefined {
+    return this._nonce;
   }
 
   toString() {
@@ -30,7 +33,7 @@ export default class Block {
   }
 
   toStringWithoutNonce() {
-    const { nonce, ...rest } = this;
-    return JSON.stringify(this);
+    const { _nonce, nonce, ...rest } = this;
+    return JSON.stringify(rest);
   }
 }

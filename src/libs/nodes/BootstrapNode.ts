@@ -1,74 +1,66 @@
-import BlockChainNode from './BlockChainNode';
+import Node from './Node';
 import net from 'net';
-import { nodeInfo, MessageType, nodeAddressInfo, CODES, InitializeChainMessage, MESSAGE_TYPES } from './types';
+import { nodeInfo, MessageType, nodeAddressInfo, CODES, InitializeChainMessage, NewTransactionMessage } from './types';
 import JsonSocket from 'json-socket';
 import { handleError } from '../../utils/sockets';
 import { Chain } from '..';
+import { ChainState } from '../../services/ChainState';
 
-// TODO Bootstrap node creates genesis block
-// with previous hash=1, nonce=0,
-// list of transactions has 1 transaction that gives bootstrapNode 100*n NBC coins from wallet address 0
-// only block that doesn't get validated
-
-export default class BootstrapNode extends BlockChainNode {
+/**
+ * Overrides subscribeHandler of simpleNode,
+ * since it can listen and react to initialization events
+ */
+export default class BootstrapNode extends Node {
   /**
    * Όταν εισαχθούν όλοι οι κόμβοι, ο bootstrap κάνει broadcast σε όλους τα ζεύγη ip address/port
    * καθώς και τα public keys των wallets όλων των κόμβων που συμμετέχουν στο σύστημα
    */
-  constructor(myNodeAddressInfo: nodeAddressInfo, private totalExpectedNodes = 5) {
-    super(myNodeAddressInfo, myNodeAddressInfo);
+  constructor(myNodeAddressInfo: nodeAddressInfo, chainState: ChainState, private totalExpectedNodes = 5) {
+    super(myNodeAddressInfo, myNodeAddressInfo, chainState);
     const pk = this.myWallet.publicKey;
     const myNodeInfo = {
       ...myNodeAddressInfo,
       pk,
     };
     this.nodes.push(myNodeInfo);
-    this.chain = Chain.initialize(pk, totalExpectedNodes);
+    this.chain = Chain.initialize(pk, totalExpectedNodes, this.chainState);
+    this.id = 0;
   }
 
-  /** Override listener function
-   * Bootstrap has extra events he listens to
-   * (initialization events)
-   */
-  override setUpServerListener(): void {
-    const { port } = this.myInfo;
-
-    const server = net.createServer();
-
-    server.listen(port, () => {
-      console.log(`Bootstrap server created listening port: ${port}`);
-    });
-
-    server.on('connection', (netSocket) => {
-      const socket = new JsonSocket(netSocket);
-      console.log('client connected');
-
-      socket.on('message', (message) => {
-        console.log(`Received message from client`, message);
-        const response = this.handleReceivedMessage(message);
-        socket.sendEndMessage(response, handleError);
-      });
-      socket.on('end', () => {
-        console.log('client disconnected');
-      });
-    });
-
-    server.on('error', (err) => {
-      throw err;
-    });
-  }
-
-  private handleReceivedMessage(message: MessageType) {
+  override handleReceivedMessage(message: MessageType, socket: JsonSocket) {
+    console.log('BOOTSTRAP handleReceivedMessage');
     switch (message.code) {
       case CODES.REGISTER:
         const { host, port, pk } = message;
         this.nodes.push({ host, port, pk });
         const nodeIndex = this.nodes.length - 1;
+        const response = { id: nodeIndex };
+        socket.sendEndMessage(response, handleError);
+
         if (this.isFinalNode(nodeIndex)) {
           console.log('all nodes entered!');
           setTimeout(this.broadcastNodesInfo.bind(this), 1000);
+          setTimeout(this.transferCoinsToNodes.bind(this), 5000);
         }
-        return { id: nodeIndex };
+        break;
+      case CODES.NEW_TRANSACTION:
+        this.handleReceivedTransaction(message);
+        break;
+      case CODES.BLOCK_FOUND:
+        this.handleReceivedBlock(message);
+        break;
+      case CODES.CHAINS_REQUEST:
+        this.handleChainsRequest(socket);
+        break;
+      case CODES.CLI_MAKE_NEW_TX:
+        this.handleCliNewTransaction(socket, message);
+        break;
+      case CODES.CLI_VIEW_LAST_TX:
+        this.handleViewLastTransactions(socket);
+        break;
+      case CODES.CLI_SHOW_BALANCE:
+        this.handleShowBalance(socket);
+        break;
       default:
         throw new Error(`unknown command ${message.code}`);
     }
@@ -77,25 +69,24 @@ export default class BootstrapNode extends BlockChainNode {
   // sends to each node, info of all Nodes
   private broadcastNodesInfo() {
     const msg: InitializeChainMessage = {
-      type: MESSAGE_TYPES.BROADCAST,
       code: CODES.INITIALIZE_CHAIN,
       nodes: this.nodes,
       blockChain: this.chain,
     };
-    console.log('this nodes', this.nodes);
-    for (const node of this.nodes) {
-      if (node.pk === this.myWallet.publicKey) continue;
+    console.log(`Sending chain with length:${this.chain.chain.length}`);
+    console.log(`And block hash: ${this.chain.lastBlock.currentHash}`);
+    this.broadcastMessage(msg);
+  }
 
-      const socket = new JsonSocket(new net.Socket());
-      socket.connect(node.port, node.host);
-      socket.on('connect', () => {
-        socket.sendEndMessage(msg, handleError);
-      });
-      socket.on('error', (error) => {
-        console.error(error);
-      });
-      // TODO implement
+  private transferCoinsToNodes() {
+    for (const node of this.nodes.slice(1)) {
+      this.makeTransaction(100, node.pk);
     }
+  }
+
+  private makeTransaction(amount: number, receiverAddress: string): void {
+    const transaction = this.myWallet.makeTransaction(amount, receiverAddress);
+    this.broadcastTransaction(transaction);
   }
 
   private isFinalNode = (nodeIndex: number) => nodeIndex === this.totalExpectedNodes - 1;

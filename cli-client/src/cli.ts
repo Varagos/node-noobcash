@@ -9,6 +9,9 @@ import path from 'path';
 import { Command } from 'commander';
 import { transaction } from './commands/transaction';
 import { myParseInt } from './utils/parser';
+import { balance } from './commands/balance';
+import { view } from './commands/view';
+
 const program = new Command();
 
 // clear();
@@ -22,5 +25,9 @@ program
   .argument('<recipient_address>', "recipient's wallet address") // The arguments may be <required> or [optional]
   .argument('<amount>', 'amount of NBC coins to send', myParseInt)
   .action(transaction);
+
+program.command('view').description('View transactions of last valid block in the blockchain').action(view);
+
+program.command('balance').description('Show remaining balance of wallet').action(balance);
 
 program.parse(process.argv);

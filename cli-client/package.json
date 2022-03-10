@@ -23,6 +23,7 @@
     "figlet": "^1.5.2",
     "gradient-string": "^2.0.0",
     "inquirer": "^8.2.0",
+    "json-socket": "^0.3.0",
     "nanospinner": "^1.0.0"
   },
   "devDependencies": {

@@ -11,6 +11,8 @@ const figlet_1 = __importDefault(require("figlet"));
 const commander_1 = require("commander");
 const transaction_1 = require("./commands/transaction");
 const parser_1 = require("./utils/parser");
+const balance_1 = require("./commands/balance");
+const view_1 = require("./commands/view");
 const program = new commander_1.Command();
 // clear();
 console.log(chalk_1.default.red(figlet_1.default.textSync('noobcash', { horizontalLayout: 'full' })));
@@ -21,4 +23,6 @@ program
     .argument('<recipient_address>', "recipient's wallet address") // The arguments may be <required> or [optional]
     .argument('<amount>', 'amount of NBC coins to send', parser_1.myParseInt)
     .action(transaction_1.transaction);
+program.command('view').description('View transactions of last valid block in the blockchain').action(view_1.view);
+program.command('balance').description('Show remaining balance of wallet').action(balance_1.balance);
 program.parse(process.argv);

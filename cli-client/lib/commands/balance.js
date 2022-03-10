@@ -12,22 +12,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.transaction = void 0;
+exports.balance = void 0;
 const chalk_1 = __importDefault(require("chalk"));
 const types_1 = require("../types");
-const helpers_1 = require("./../helpers");
-/** The action handler gets passed a parameter
- * for each command-argument you declared, and
- *  two additional parameters which are the
- * parsed options and the command object itself.
- */
-const transaction = (recipientAddress, amount) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('Hello first command');
-    // talk to my backend
+const helpers_1 = require("../helpers");
+const balance = () => __awaiter(void 0, void 0, void 0, function* () {
     const message = {
-        code: types_1.CODES.CLI_MAKE_NEW_TX,
-        recipientAddress,
-        amount,
+        code: types_1.CODES.CLI_SHOW_BALANCE,
     };
     try {
         const response = yield (0, helpers_1.makeRequest)(message);
@@ -38,4 +29,4 @@ const transaction = (recipientAddress, amount) => __awaiter(void 0, void 0, void
     }
     // tell him to make transaction to recipientAddress, with amount
 });
-exports.transaction = transaction;
+exports.balance = balance;
