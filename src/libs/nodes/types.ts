@@ -22,6 +22,10 @@ export enum CODES {
   CLI_SHOW_BALANCE = 'cliShowBalance',
 }
 
+export type ChainResponse = {
+  blockChain: Chain;
+};
+
 // Have a type broacast / bootstrap
 // and code for extra info(e.g. register, transaction, mined)
 export type RegisterNodeMessage = {

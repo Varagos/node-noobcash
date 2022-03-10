@@ -24,6 +24,7 @@ export default class BootstrapNode extends Node {
     };
     this.nodes.push(myNodeInfo);
     this.chain = Chain.initialize(pk, totalExpectedNodes, this.chainState);
+    this.id = 0;
   }
 
   override handleReceivedMessage(message: MessageType, socket: JsonSocket) {
@@ -49,7 +50,7 @@ export default class BootstrapNode extends Node {
         this.handleReceivedBlock(message);
         break;
       case CODES.CHAINS_REQUEST:
-        this.handleChainsRequest();
+        this.handleChainsRequest(socket);
         break;
       case CODES.CLI_MAKE_NEW_TX:
         this.handleCliNewTransaction(socket, message);

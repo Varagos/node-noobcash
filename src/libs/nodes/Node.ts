@@ -10,10 +10,12 @@ import {
   BlockMineFoundMessage,
   ChainsRequestMessage,
   CliNewTransactionMessage,
+  ChainResponse,
 } from './types';
 import JsonSocket from 'json-socket';
-import { handleError } from '../../utils/sockets';
+import { handleError, requestChain } from '../../utils/sockets';
 import { ChainState } from '../../services/ChainState';
+import { notEqual } from 'assert';
 
 /**
  * A node has a wallet-1 pk
@@ -116,7 +118,7 @@ export default class BlockChainNode {
         this.handleReceivedBlock(message);
         break;
       case CODES.CHAINS_REQUEST:
-        this.handleChainsRequest();
+        this.handleChainsRequest(socket);
         break;
       case CODES.CLI_MAKE_NEW_TX:
         this.handleCliNewTransaction(socket, message);
@@ -157,22 +159,19 @@ export default class BlockChainNode {
     this.broadcastMessage(message);
   }
 
-  protected broadcastChainsRequest() {
-    const message: ChainsRequestMessage = {
-      code: CODES.CHAINS_REQUEST,
-    };
-    this.broadcastMessage(message);
-  }
-  // sends to each node, info of all Nodes
+  /**
+   * Also broadcasts message to ourselves,
+   * for messages that don't need ACK
+   * and need some processing on receive,
+   * we consume them like all nodes
+   * @param message
+   */
   protected broadcastMessage(message: MessageType) {
     console.log('Broadcasting message to', this.nodes.length, 'nodes');
     for (const node of this.nodes) {
-      // TODO broadcast to myself as well? .e.g makeTransaction
-      // if (node.pk !== this.myWallet.publicKey){
       const { host, port } = node;
       console.log('Sending message to', host, port);
       this.sendOneMessageToNode(host, port, message);
-      // }
     }
   }
 
@@ -192,28 +191,65 @@ export default class BlockChainNode {
     this.chain.addTransaction(message.transaction, this.broadcastBlock.bind(this));
   }
 
-  protected handleReceivedBlock(message: BlockMineFoundMessage) {
+  protected async handleReceivedBlock(message: BlockMineFoundMessage) {
     console.log('Received block');
     if (!this.chain.handleReceivedBlock(message.block)) {
-      this.resolveConflict(message.block);
+      await this.resolveConflict();
+    }
+    console.log('MY ID IS:', this.id);
+    if (this.id == 0) {
+      console.log('I AM NODE ZERO');
+      await this.resolveConflict();
     }
   }
 
-  protected handleChainsRequest() {
+  protected handleChainsRequest(socket: JsonSocket) {
     console.log('ChainsRequest');
+    const msg: ChainResponse = { blockChain: this.chain };
+    socket.sendEndMessage(msg, handleError);
   }
 
   // TODO resolve-conflict
-  protected resolveConflict(block: Block) {
+  protected async resolveConflict() {
     console.log('💢 Conflict detected');
-    // this.broadcastChainsRequest();
-    // TODO ask remaining nodes for their chain, and keep longest valid
+
+    const message: ChainsRequestMessage = {
+      code: CODES.CHAINS_REQUEST,
+    };
+
+    // ask remaining nodes for their chain, and keep longest valid
+    const otherNodes = this.nodes.filter((node) => node.pk !== this.myWallet.publicKey);
+    const chains = await Promise.all(otherNodes.map((node) => requestChain(node.host, node.port, message)));
+    console.log('Received chains from other nodes', chains);
+
+    const sortedChains = chains.sort((a, b) => {
+      if (a.blockChain.chain.length > b.blockChain.chain.length) return -1;
+      if (a.blockChain.chain.length < b.blockChain.chain.length) return 1;
+      return 0;
+    });
+    // console.log(
+    //   'sortedChain lengths',
+    //   sortedChains.map((x) => x.blockChain.chain.length)
+    // );
+    chains[0].blockChain.chain.length;
+    let chainReplaced = false;
+    for (const { blockChain } of sortedChains) {
+      const chain = Chain.initializeReceived(blockChain, this.chainState);
+      const chainIsValid = chain.validateChain();
+      if (chainIsValid) {
+        console.log('validated chain-resolved conflict');
+        this.chain = chain;
+        chainReplaced = true;
+        break;
+      }
+    }
+    if (!chainReplaced) throw new Error('Could not resolve conflict - all chains were invalid');
   }
 
   protected handleCliNewTransaction(socket: JsonSocket, message: CliNewTransactionMessage) {
     console.log('Received new transaction command');
-    socket.sendEndMessage({ result: 'OK NEW TRANSACTION' }, handleError);
     // TODO
+    socket.sendEndMessage({ result: 'OK NEW TRANSACTION' }, handleError);
   }
 
   protected handleViewLastTransactions(socket: JsonSocket) {

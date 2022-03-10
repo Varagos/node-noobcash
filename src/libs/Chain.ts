@@ -13,7 +13,7 @@ type BroadCastBlock = (block: Block) => void;
  */
 const CAPACITY = 2;
 
-const DIFFICULTY = 4;
+const DIFFICULTY = 5;
 /**
  * There can only be a single Block chain
  * so we use the Singleton pattern
@@ -30,7 +30,7 @@ export default class Chain {
   /**
    * list of transactions that are yet to be mined
    */
-  currentTransactions: Transaction[];
+  transactionPool: Transaction[];
 
   miningBlock: Block | null = null;
 
@@ -43,12 +43,12 @@ export default class Chain {
     if (!receiverAddress || !amount) {
       console.log('Initializing empty chain');
       this.chain = [];
-      this.currentTransactions = [];
+      this.transactionPool = [];
       return;
     }
     const genesisBlock = this.createGenesisBlock(receiverAddress, amount);
     this.chain = [genesisBlock];
-    this.currentTransactions = [];
+    this.transactionPool = [];
 
     console.log('Initializing chain with genesis Block');
   }
@@ -61,8 +61,6 @@ export default class Chain {
   }
 
   public static initializeReceived(receivedChain: Chain, chainState: ChainState) {
-    console.log('validating chain', typeof receivedChain);
-    console.log(receivedChain);
     Chain._instance = Object.assign(new Chain(chainState), receivedChain);
 
     Chain._instance.castSerializedChain();
@@ -151,7 +149,7 @@ export default class Chain {
     const isValid = this.verifyTransaction(transaction);
     console.log('Valid result of transaction is', isValid);
     if (!isValid) return;
-    this.currentTransactions.push(transaction);
+    this.transactionPool.push(transaction);
     return this.checkForTransactionsToMine(broadcastBlock);
   }
 
@@ -182,11 +180,11 @@ export default class Chain {
   }
 
   private async checkForTransactionsToMine(broadcastBlock: BroadCastBlock) {
-    if (this.currentTransactions.length >= CAPACITY && this.minerStatus !== 'mining') {
+    if (this.transactionPool.length >= CAPACITY && this.minerStatus !== 'mining') {
       this.minerStatus = 'mining';
       const transactionsToBeMined = [];
       for (let index = 0; index < CAPACITY; index++) {
-        const transaction = this.currentTransactions.shift();
+        const transaction = this.transactionPool.shift();
         if (transaction === undefined) throw new Error('Reached Unreachable code');
         transactionsToBeMined.push(transaction);
       }
@@ -310,14 +308,17 @@ export default class Chain {
 
       console.log('📥CASE1-RECEIVED VALID BLOCK');
       const minedTransactionIds = new Set(block.transactions.map((tr) => tr.transactionId));
-      if (this.miningBlock) this.currentTransactions = this.currentTransactions.concat(this.miningBlock.transactions);
+      if (this.miningBlock) this.transactionPool = this.transactionPool.concat(this.miningBlock.transactions);
       // filter my remaining transactions
-      this.currentTransactions = this.currentTransactions.filter((tx) => !minedTransactionIds.has(tx.transactionId));
+      this.transactionPool = this.transactionPool.filter((tx) => !minedTransactionIds.has(tx.transactionId));
       // when i set this flag mining stops and new mining may start
       this.breakMining = true;
       return true;
     } else {
       console.log('CASE2-RECEIVED FOR OLD BLOCK');
+      // TODO we can ignore this since we have a longer chain,
+      // UNLESS it comes after next-to-last block
+      // Which would create a same length chain
       console.log(`I have ${this.chain.length} blocks in my chain`);
       console.log(`Previous block of received block is my No:${previousBlockIndex + 1}`);
       return false;
