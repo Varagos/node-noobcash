@@ -186,6 +186,11 @@ export default class BlockChainNode {
     });
   }
 
+  protected makeTransaction(amount: number, receiverAddress: string): void {
+    const transaction = this.myWallet.makeTransaction(amount, receiverAddress);
+    this.broadcastTransaction(transaction);
+  }
+
   protected handleReceivedTransaction(message: NewTransactionMessage) {
     console.log('Received transaction');
     this.chain.addTransaction(message.transaction, this.broadcastBlock.bind(this));
@@ -249,18 +254,31 @@ export default class BlockChainNode {
   protected handleCliNewTransaction(socket: JsonSocket, message: CliNewTransactionMessage) {
     console.log('Received new transaction command');
     // TODO
-    socket.sendEndMessage({ result: 'OK NEW TRANSACTION' }, handleError);
+    // Verify public key exists
+    if (!this.nodes.some((node) => node.pk === message.recipientAddress)) {
+      socket.sendEndMessage({ response: null, error: 'There is no node for provided recipientAddress' }, handleError);
+      return;
+    }
+
+    // TODO validate he has the UTXOs, perhaps inside makeTransaction?
+    try {
+      this.makeTransaction(message.amount, message.recipientAddress);
+      socket.sendEndMessage({ response: 'Transaction broadcasted', error: null }, handleError);
+    } catch (error) {
+      socket.sendEndMessage({ response: null, error }, handleError);
+    }
   }
 
   protected handleViewLastTransactions(socket: JsonSocket) {
     console.log('handle view last transactions');
 
-    socket.sendEndMessage({ result: 'OK LAST TRANSACTIONS' }, handleError);
+    const lastTransactions = this.chain.lastBlock.transactions;
+    socket.sendEndMessage({ response: lastTransactions, error: null }, handleError);
   }
 
   protected handleShowBalance(socket: JsonSocket) {
     console.log('Handle show balance');
 
-    socket.sendEndMessage({ result: 'OK SHOW BALANCE' }, handleError);
+    socket.sendEndMessage({ response: this.myWallet.myWalletBalance() }, handleError);
   }
 }

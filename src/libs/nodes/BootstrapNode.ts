@@ -84,10 +84,5 @@ export default class BootstrapNode extends Node {
     }
   }
 
-  private makeTransaction(amount: number, receiverAddress: string): void {
-    const transaction = this.myWallet.makeTransaction(amount, receiverAddress);
-    this.broadcastTransaction(transaction);
-  }
-
   private isFinalNode = (nodeIndex: number) => nodeIndex === this.totalExpectedNodes - 1;
 }

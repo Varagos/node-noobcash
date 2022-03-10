@@ -43,7 +43,7 @@ export default class Wallet {
     if (unspentOutputsToBeConsumed === null) {
       console.error('Attempted to make a transaction without having necessary UTXOs');
       console.log('I only have', this.chainState.walletBalance(this.publicKey));
-      process.exit(1);
+      throw new Error('Not enough coins to make the transaction');
     }
     transaction.consumeOldUTXOs(unspentOutputsToBeConsumed);
     transaction.transactionOutputs.forEach(this.chainState.addUnspentOutput.bind(this.chainState));
