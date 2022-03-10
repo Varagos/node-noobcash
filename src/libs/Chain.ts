@@ -13,7 +13,7 @@ type BroadCastBlock = (block: Block) => void;
  */
 const CAPACITY = 2;
 
-const DIFFICULTY = 5;
+const DIFFICULTY = 4;
 /**
  * There can only be a single Block chain
  * so we use the Singleton pattern
@@ -315,6 +315,7 @@ export default class Chain {
       this.currentTransactions = this.currentTransactions.filter((tx) => !minedTransactionIds.has(tx.transactionId));
       // when i set this flag mining stops and new mining may start
       this.breakMining = true;
+      return true;
     } else {
       console.log('CASE2-RECEIVED FOR OLD BLOCK');
       console.log(`I have ${this.chain.length} blocks in my chain`);
@@ -323,9 +324,8 @@ export default class Chain {
     }
   }
 
-  blockExists(block: Block){
+  blockExists(block: Block) {
     return this.chain.some((someBlock) => someBlock.currentHash === block.currentHash);
-
   }
   /**
    * TODO wallet_balance()
