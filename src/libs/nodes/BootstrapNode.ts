@@ -51,6 +51,15 @@ export default class BootstrapNode extends Node {
       case CODES.CHAINS_REQUEST:
         this.handleChainsRequest();
         break;
+      case CODES.CLI_MAKE_NEW_TX:
+        this.handleCliNewTransaction(socket, message);
+        break;
+      case CODES.CLI_VIEW_LAST_TX:
+        this.handleViewLastTransactions(socket);
+        break;
+      case CODES.CLI_SHOW_BALANCE:
+        this.handleShowBalance(socket);
+        break;
       default:
         throw new Error(`unknown command ${message.code}`);
     }
@@ -74,8 +83,8 @@ export default class BootstrapNode extends Node {
     }
   }
 
-  private makeTransaction(amount: number, receiverAddress: string): void{
-    const transaction = this.myWallet.makeTransaction(amount,receiverAddress);
+  private makeTransaction(amount: number, receiverAddress: string): void {
+    const transaction = this.myWallet.makeTransaction(amount, receiverAddress);
     this.broadcastTransaction(transaction);
   }
 

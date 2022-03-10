@@ -14,6 +14,7 @@ export default class Wallet {
       publicKeyEncoding: { type: 'spki', format: 'pem' },
       privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
     });
+    console.log('My PK: ', keypair.publicKey);
     // format pem is saved in file system
     this.privateKey = keypair.privateKey;
     this.publicKey = keypair.publicKey;
