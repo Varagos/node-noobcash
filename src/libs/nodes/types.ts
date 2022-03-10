@@ -16,6 +16,7 @@ export enum CODES {
   INITIALIZE_CHAIN = 'initializeChain',
   NEW_TRANSACTION = 'newTransaction',
   BLOCK_FOUND = 'blockFound',
+  CHAINS_REQUEST = 'chainsRequest',
   CLI_MAKE_NEW_TX = 'cliMakeTransaction',
   CLI_VIEW_LAST_TX = 'cliViewLastTransactions',
   CLI_SHOW_BALANCE = 'cliShowBalance',
@@ -38,6 +39,9 @@ export type NewTransactionMessage = {
   transaction: Transaction;
 };
 
+export type ChainsRequestMessage = {
+  code: CODES.CHAINS_REQUEST;
+};
 /**
  * The END_MINING event is triggered when one of the nodes successfully mine the block.
  * It sets a flag to true which tells the other nodes on the network to stop mining
@@ -67,6 +71,7 @@ export type MessageType =
   | InitializeChainMessage
   | NewTransactionMessage
   | BlockMineFoundMessage
+  | ChainsRequestMessage
   | CliNewTransactionMessage
   | CliViewLastTransactions
   | CliShowBalance;

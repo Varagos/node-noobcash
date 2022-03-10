@@ -48,6 +48,9 @@ export default class BootstrapNode extends Node {
       case CODES.BLOCK_FOUND:
         this.handleReceivedBlock(message);
         break;
+      case CODES.CHAINS_REQUEST:
+        this.handleChainsRequest();
+        break;
       case CODES.CLI_MAKE_NEW_TX:
         this.handleCliNewTransaction(socket, message);
         break;
@@ -76,8 +79,13 @@ export default class BootstrapNode extends Node {
 
   private transferCoinsToNodes() {
     for (const node of this.nodes.slice(1)) {
-      this.broadcastTransaction(node.pk, 100);
+      this.makeTransaction(100, node.pk);
     }
+  }
+
+  private makeTransaction(amount: number, receiverAddress: string): void {
+    const transaction = this.myWallet.makeTransaction(amount, receiverAddress);
+    this.broadcastTransaction(transaction);
   }
 
   private isFinalNode = (nodeIndex: number) => nodeIndex === this.totalExpectedNodes - 1;
