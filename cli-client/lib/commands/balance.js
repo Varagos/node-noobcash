@@ -16,13 +16,18 @@ exports.balance = void 0;
 const chalk_1 = __importDefault(require("chalk"));
 const types_1 = require("../types");
 const helpers_1 = require("../helpers");
+const backend_json_1 = __importDefault(require("../backend.json"));
 const balance = () => __awaiter(void 0, void 0, void 0, function* () {
     const message = {
         code: types_1.CODES.CLI_SHOW_BALANCE,
     };
     try {
-        const response = yield (0, helpers_1.makeRequest)(message);
-        console.log('Response:', response);
+        const host = '127.0.0.1';
+        const port = 8080;
+        backend_json_1.default.nodes.forEach(({ host, port }) => __awaiter(void 0, void 0, void 0, function* () {
+            const response = yield (0, helpers_1.makeRequest)(host, port, message);
+            console.log(`Response from ${port}:`, response);
+        }));
     }
     catch (error) {
         console.log(chalk_1.default.red('❌ Error:', error));

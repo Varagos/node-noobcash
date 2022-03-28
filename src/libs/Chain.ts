@@ -63,9 +63,11 @@ export default class Chain {
   public static initializeReceived(receivedChain: Chain, chainState: ChainState) {
     Chain._instance = Object.assign(new Chain(chainState), receivedChain);
 
+    console.log('Received chain:', receivedChain);
     Chain._instance.castSerializedChain();
     console.log(`Initializing chain with length:${Chain._instance.chain.length}`);
     console.log(`And block hash: ${Chain._instance.lastBlock.currentHash}`);
+    Chain._instance.createUTXOFromChain(chainState);
     return Chain._instance;
   }
 
@@ -86,6 +88,8 @@ export default class Chain {
     const serializedChain = this.chain;
     const castedChain = serializedChain.map((serializedBlock) => blockFromSerialized(serializedBlock));
     this.chain = castedChain;
+    // console.log('this.chain:', this.chain);
+
     // TODO  also cast currentTransactions ???
     // if we are only interested in received chain we should perhaps clear
     // current transactions received
@@ -101,6 +105,8 @@ export default class Chain {
     };
     this.chainState.addUnspentOutput(utxo);
 
+    firstTransaction.transactionOutputs = [utxo];
+    console.log('First transaction', firstTransaction);
     const previousHash = '1';
     const genesisBlock = new Block(previousHash, [firstTransaction]);
     genesisBlock.nonce = 0;
@@ -146,9 +152,10 @@ export default class Chain {
 
   async addTransaction(serializedTransaction: Transaction, broadcastBlock: BroadCastBlock) {
     const transaction = transactionFromSerialized(serializedTransaction);
-    const isValid = this.verifyTransaction(transaction);
+    const isValid = this.validateTransaction(transaction);
     console.log('Valid result of transaction is', isValid);
     if (!isValid) return;
+    console.log('✅ Received valid transaction');
     this.transactionPool.push(transaction);
     return this.checkForTransactionsToMine(broadcastBlock);
   }
@@ -159,9 +166,17 @@ export default class Chain {
    */
   validateTransaction(transaction: Transaction) {
     const isValid = this.verifyTransaction(transaction);
-    return isValid;
 
-    // TODO validate that he has sufficient UTXOs
+    // validate user had requested UTXOs
+    const validUtxos = this.chainState.validateSenderHasUTXOs(
+      transaction.senderAddress,
+      transaction.transactionInputs,
+      transaction.transactionOutputs
+    );
+    if (!validUtxos) console.error('⛔ UTXOs received are not valid for recipient');
+
+    // return isValid && validUtxos;
+    return isValid;
   }
 
   /**
@@ -250,12 +265,20 @@ export default class Chain {
 
   /**
    * Create UTXOs chainState for received Chain instance
+   * Can only build UTXO Chain State if chain has >= 1 transactions
+   * and so it will include genesis UTXO
    */
-  createUTXOFromChain() {
+  createUTXOFromChain(chainState: ChainState) {
+    console.log('createUTXOFromChain');
+    console.log('1111111111111111');
+    this.chainState = chainState;
     this.chainState.clear();
+    console.log('22222222222222');
     const spentTXOutputIds = new Set();
     const allOutputs = [];
+    console.log('createUTXOFromChain =>> this.chain');
     for (const block of this.chain) {
+      console.log('createUTXOFromChain block');
       for (const transaction of block.transactions) {
         for (const input of transaction.transactionInputs) {
           spentTXOutputIds.add(input.previousOutputId);
@@ -267,6 +290,7 @@ export default class Chain {
     }
     const unspentTXOutputs = allOutputs.filter((output) => !spentTXOutputIds.has(output.id));
     for (const UTXO of unspentTXOutputs) {
+      console.log('Adding UTXO..............................');
       this.chainState.addUnspentOutput(UTXO);
     }
   }

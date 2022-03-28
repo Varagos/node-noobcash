@@ -15,7 +15,6 @@ import {
 import JsonSocket from 'json-socket';
 import { handleError, requestChain } from '../../utils/sockets';
 import { ChainState } from '../../services/ChainState';
-import { notEqual } from 'assert';
 
 /**
  * A node has a wallet-1 pk
@@ -201,11 +200,11 @@ export default class BlockChainNode {
     if (!this.chain.handleReceivedBlock(message.block)) {
       await this.resolveConflict();
     }
-    console.log('MY ID IS:', this.id);
-    if (this.id == 0) {
-      console.log('I AM NODE ZERO');
-      await this.resolveConflict();
-    }
+    // console.log('MY ID IS:', this.id);
+    // if (this.id == 0) {
+    //   console.log('I AM NODE ZERO');
+    //   await this.resolveConflict();
+    // }
   }
 
   protected handleChainsRequest(socket: JsonSocket) {
@@ -279,6 +278,12 @@ export default class BlockChainNode {
   protected handleShowBalance(socket: JsonSocket) {
     console.log('Handle show balance');
 
-    socket.sendEndMessage({ response: this.myWallet.myWalletBalance() }, handleError);
+    socket.sendEndMessage(
+      {
+        response: this.myWallet.myWalletBalance(),
+        // chainState: this.chainState.localStorage
+      },
+      handleError
+    );
   }
 }

@@ -16,6 +16,7 @@ exports.transaction = void 0;
 const chalk_1 = __importDefault(require("chalk"));
 const types_1 = require("../types");
 const helpers_1 = require("./../helpers");
+const backend_json_1 = __importDefault(require("../backend.json"));
 /** The action handler gets passed a parameter
  * for each command-argument you declared, and
  *  two additional parameters which are the
@@ -30,8 +31,10 @@ const transaction = (recipientAddress, amount) => __awaiter(void 0, void 0, void
         amount,
     };
     try {
-        const response = yield (0, helpers_1.makeRequest)(message);
-        console.log('Response:', response);
+        backend_json_1.default.nodes.forEach(({ host, port }) => __awaiter(void 0, void 0, void 0, function* () {
+            const response = yield (0, helpers_1.makeRequest)(host, port, message);
+            console.log(`Response from ${port}:`, response);
+        }));
     }
     catch (error) {
         console.log(chalk_1.default.red('❌ Error:', error));
