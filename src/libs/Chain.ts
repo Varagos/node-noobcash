@@ -141,7 +141,7 @@ export default class Chain {
        * We yield every at-least 10 ms passed
        * to let the event loop process other requests
        */
-      if (blockingSince + 10 > Date.now()) {
+      if (blockingSince + 300 > Date.now()) {
         await setImmediatePromise();
         blockingSince = Date.now();
       }
