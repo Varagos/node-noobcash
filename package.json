@@ -4,7 +4,9 @@
   "description": "",
   "scripts": {
     "start:dev": "NODE_ENV=development nodemon src/server.ts",
-    "start:prod": "NODE_ENV=production node src/server.ts",
+    "start:prod2": "npm run build && npm run copy-files && NODE_ENV=production node dist/server.js",
+    "start:prod": "NODE_ENV=production nodemon src/server.ts",
+    "copy-files": "cp ./src/nodes/ ./dist/",
     "build": "rimraf dist && mkdir dist && tsc",
     "dev": "tsc -w & nodemon ."
   },
