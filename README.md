@@ -38,3 +38,12 @@ https://firecamp.io/
 
 [What-the-heck-is-utxo](https://medium.com/bitbees/what-the-heck-is-utxo-ca68f2651819)
 [Are transactions signed?](https://bitcoin.stackexchange.com/questions/106039/are-utxos-signed-with-a-private-key)
+
+## Usage
+
+Capacity and difficulty are optional. Capacity equals the number of transactions per block,
+while difficulty the number of required zeros for a successful mine.
+
+```bash
+yarn start:dev <NODE_INDEX> [CAPACITY] [DIFFICULTY]
+```

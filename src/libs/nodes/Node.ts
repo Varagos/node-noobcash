@@ -26,6 +26,7 @@ export default class BlockChainNode {
   protected id?: number;
   protected nodes: nodeInfo[] = [];
   protected myWallet: Wallet;
+  protected executedTXs: boolean = false;
 
   // TODO keep list with all nodes in order to interchange msgs
   constructor(
@@ -110,9 +111,9 @@ export default class BlockChainNode {
         if (!chainIsValid) throw new Error('Cannot validate received chain');
         this.chain = chain;
         console.log('validated chain!');
-        setTimeout(() => {
-          this.readAndExecuteMyTransactions();
-        }, 5 * 1000);
+        // setTimeout(() => {
+        //   this.readAndExecuteMyTransactions();
+        // }, 5 * 1000);
         break;
       case CODES.NEW_TRANSACTION:
         this.handleReceivedTransaction(message);
@@ -173,7 +174,7 @@ export default class BlockChainNode {
     console.log('Broadcasting message to', this.nodes.length, 'nodes');
     for (const node of this.nodes) {
       const { host, port } = node;
-      console.log('Sending message to', host, port);
+      // console.log('Sending message to', host, port);
       this.sendOneMessageToNode(host, port, message);
     }
   }
@@ -197,7 +198,11 @@ export default class BlockChainNode {
   protected async handleReceivedTransaction(message: NewTransactionMessage) {
     console.log('Received transaction');
     await this.chain.addTransaction(message.transaction, this.broadcastBlock.bind(this));
-    console.log('Checking balance after received transaction, iAmReadyStatus', this.readyToMakeTransactions());
+    // console.log('Checking balance after received transaction, iAmReadyStatus', this.readyToMakeTransactions());
+    if (this.executedTXs === false && this.readyToMakeTransactions()) {
+      this.executedTXs = true;
+      await this.readAndExecuteMyTransactions();
+    }
   }
 
   protected async handleReceivedBlock(message: BlockMineFoundMessage) {
@@ -290,7 +295,7 @@ export default class BlockChainNode {
   }
 
   protected async readAndExecuteMyTransactions() {
-    console.log('readAndExecuteMyTransactions');
+    console.log('Starting execution of my transactions, my balance:', this.myWallet.myWalletBalance());
     const data = await fs.readFile(__dirname + '/../../5nodes/transactions' + this.id + '.txt');
     const arr = data.toString().replace(/\r\n/g, '\n').split('\n');
     // console.log('all IDS:', this.nodes);
@@ -299,6 +304,7 @@ export default class BlockChainNode {
       const [idString, amount] = v.split(' ');
       const id = idString.substring(2);
       // console.log(`ID:[${id}] => ${amount}`);
+      return this.makeTransaction(+amount, this.nodes[+id].pk);
     });
     try {
       await Promise.all(promises);

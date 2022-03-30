@@ -42,9 +42,9 @@ export default class BootstrapNode extends Node {
           setTimeout(this.broadcastNodesInfo.bind(this), 1000);
           setTimeout(this.transferCoinsToNodes.bind(this), 2000);
 
-          setTimeout(() => {
-            this.readAndExecuteMyTransactions();
-          }, 5 * 1000);
+          // setTimeout(() => {
+          //   this.readAndExecuteMyTransactions();
+          // }, 5 * 1000);
         }
         break;
       case CODES.NEW_TRANSACTION:

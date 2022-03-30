@@ -1,5 +1,7 @@
 import * as crypto from 'crypto';
 import { v4 as uuid } from 'uuid';
+import fs from 'fs';
+import { performance } from 'perf_hooks';
 import { blockFromSerialized, transactionFromSerialized } from './../utils/objectToClass';
 import { TransactionOutput } from './Transaction';
 import { ChainState } from './../services/ChainState';
@@ -11,9 +13,16 @@ type BroadCastBlock = (block: Block) => void;
 /**
  * Number of transactions per block
  */
-const CAPACITY = 2;
+const CAPACITY = process.argv[3] ? +process.argv[3] : 2;
+console.log('Capacity:', CAPACITY);
 
-const DIFFICULTY = 5;
+const DIFFICULTY = process.argv[4] ? +process.argv[4] : 5;
+console.log('Difficulty:', DIFFICULTY);
+
+const loggerStream = fs.createWriteStream(
+  __dirname + `/../../block-time${process.argv[2]}-cap[${CAPACITY}]-dif[${DIFFICULTY}].txt`,
+  { flags: 'a' }
+);
 /**
  * There can only be a single Block chain
  * so we use the Singleton pattern
@@ -40,10 +49,12 @@ export default class Chain {
   private constructor(chainState: ChainState, receiverAddress?: string, amount?: number) {
     this.chainState = chainState;
 
+    // If not bootstrap Node
     if (!receiverAddress || !amount) {
       console.log('Initializing empty chain');
       this.chain = [];
       this.transactionPool = [];
+
       return;
     }
     const genesisBlock = this.createGenesisBlock(receiverAddress, amount);
@@ -214,6 +225,8 @@ export default class Chain {
         newBlock.nonce = solution;
         this.chain.push(newBlock);
         broadcastBlock(newBlock);
+        const newBlockTs = performance.now();
+        loggerStream.write(newBlockTs + '\n');
       }
 
       this.minerStatus = 'idle';
@@ -326,6 +339,10 @@ export default class Chain {
        */
 
       console.log('📥CASE1-RECEIVED VALID BLOCK');
+
+      const newBlockTs = performance.now();
+      loggerStream.write(newBlockTs + '\n');
+
       const minedTransactionIds = new Set(block.transactions.map((tr) => tr.transactionId));
       if (this.miningBlock) this.transactionPool = this.transactionPool.concat(this.miningBlock.transactions);
       // filter my remaining transactions
