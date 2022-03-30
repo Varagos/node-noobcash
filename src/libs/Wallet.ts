@@ -20,32 +20,28 @@ export default class Wallet {
     this.publicKey = keypair.publicKey;
   }
 
-  // async sendMoney(amount: number, receiverAddress: string) {
-  //   console.log(`Sending ${amount} 💰NBC💰 to receiver`);
-  //   const transaction = new Transaction(this.publicKey, receiverAddress, amount);
-  //   const unspentOutputsToBeConsumed = this.chainState.findUnspentOutputsForAmount(this.publicKey, amount);
-  //   if (unspentOutputsToBeConsumed === null) {
-  //     console.error('Attempted to make a transaction without having necessary UTXOs');
-  //     console.log('I only have', this.chainState.walletBalance(this.publicKey));
-  //     process.exit(1);
-  //   }
-  //   transaction.consumeOldUTXOs(unspentOutputsToBeConsumed);
-  //   transaction.transactionOutputs.forEach(this.chainState.addUnspentOutput.bind(this.chainState));
-
-  //   transaction.signature = this.signTransaction(transaction);
-  //   await Chain.instance.addTransaction(transaction, this.publicKey);
-  // }
-
-  makeTransaction(amount: number, receiverAddress: string): Transaction {
+  createTransaction(amount: number, receiverAddress: string): Transaction {
     console.log(`Sending ${amount} 💰NBC💰 to receiver`);
     const transaction = new Transaction(this.publicKey, receiverAddress, amount);
+    /**
+     * We need to update ChainState in order to have possible subsequent synchronous
+     * makeTransactions access an updated view of chainState
+     */
     const unspentOutputsToBeConsumed = this.chainState.findUnspentOutputsForAmount(this.publicKey, amount);
+
     if (unspentOutputsToBeConsumed === null) {
       console.error('Attempted to make a transaction without having necessary UTXOs');
       console.log('I only have', this.chainState.walletBalance(this.publicKey));
       throw new Error('Not enough coins to make the transaction');
     }
+
+    // Remove old UTXOs from chainState
+    unspentOutputsToBeConsumed.forEach((transactionOutput) =>
+      this.chainState.removeUnspentOutput(this.publicKey, transactionOutput.id)
+    );
+
     transaction.consumeOldUTXOs(unspentOutputsToBeConsumed);
+    // Add new UnspentOutputs into chainState
     transaction.transactionOutputs.forEach(this.chainState.addUnspentOutput.bind(this.chainState));
 
     transaction.signature = this.signTransaction(transaction);

@@ -1,6 +1,8 @@
 import chalk from 'chalk';
 import { CliNewTransactionMessage, CODES } from '../types';
 import { makeRequest } from './../helpers';
+
+import backend from '../backend.json';
 /** The action handler gets passed a parameter
  * for each command-argument you declared, and
  *  two additional parameters which are the
@@ -16,8 +18,10 @@ export const transaction = async (recipientAddress: string, amount: number) => {
     amount,
   };
   try {
-    const response = await makeRequest(message);
-    console.log('Response:', response);
+    backend.nodes.forEach(async ({ host, port }) => {
+      const response = await makeRequest(host, port, message);
+      console.log(`Response from ${port}:`, response);
+    });
   } catch (error) {
     console.log(chalk.red('❌ Error:', error));
   }

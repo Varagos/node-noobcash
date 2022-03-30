@@ -16,13 +16,16 @@ exports.view = void 0;
 const chalk_1 = __importDefault(require("chalk"));
 const types_1 = require("../types");
 const helpers_1 = require("../helpers");
+const backend_json_1 = __importDefault(require("../backend.json"));
 const view = () => __awaiter(void 0, void 0, void 0, function* () {
     const message = {
         code: types_1.CODES.CLI_VIEW_LAST_TX,
     };
     try {
-        const response = yield (0, helpers_1.makeRequest)(message);
-        console.log('Response:', response);
+        backend_json_1.default.nodes.forEach(({ host, port }) => __awaiter(void 0, void 0, void 0, function* () {
+            const response = yield (0, helpers_1.makeRequest)(host, port, message);
+            console.log(`Response from ${port}:`, response);
+        }));
     }
     catch (error) {
         console.log(chalk_1.default.red('❌ Error:', error));

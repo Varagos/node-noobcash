@@ -63,9 +63,11 @@ export default class Chain {
   public static initializeReceived(receivedChain: Chain, chainState: ChainState) {
     Chain._instance = Object.assign(new Chain(chainState), receivedChain);
 
+    console.log('Received chain:', receivedChain);
     Chain._instance.castSerializedChain();
     console.log(`Initializing chain with length:${Chain._instance.chain.length}`);
     console.log(`And block hash: ${Chain._instance.lastBlock.currentHash}`);
+    Chain._instance.createUTXOFromChain(chainState);
     return Chain._instance;
   }
 
@@ -86,6 +88,8 @@ export default class Chain {
     const serializedChain = this.chain;
     const castedChain = serializedChain.map((serializedBlock) => blockFromSerialized(serializedBlock));
     this.chain = castedChain;
+    // console.log('this.chain:', this.chain);
+
     // TODO  also cast currentTransactions ???
     // if we are only interested in received chain we should perhaps clear
     // current transactions received
@@ -101,6 +105,8 @@ export default class Chain {
     };
     this.chainState.addUnspentOutput(utxo);
 
+    firstTransaction.transactionOutputs = [utxo];
+    console.log('First transaction', firstTransaction);
     const previousHash = '1';
     const genesisBlock = new Block(previousHash, [firstTransaction]);
     genesisBlock.nonce = 0;
@@ -146,9 +152,10 @@ export default class Chain {
 
   async addTransaction(serializedTransaction: Transaction, broadcastBlock: BroadCastBlock) {
     const transaction = transactionFromSerialized(serializedTransaction);
-    const isValid = this.verifyTransaction(transaction);
+    const isValid = this.validateTransaction(transaction);
     console.log('Valid result of transaction is', isValid);
     if (!isValid) return;
+    console.log('✅ Received valid transaction');
     this.transactionPool.push(transaction);
     return this.checkForTransactionsToMine(broadcastBlock);
   }
@@ -159,9 +166,17 @@ export default class Chain {
    */
   validateTransaction(transaction: Transaction) {
     const isValid = this.verifyTransaction(transaction);
-    return isValid;
 
-    // TODO validate that he has sufficient UTXOs
+    // validate user had requested UTXOs
+    const validUtxos = this.chainState.validateSenderHasUTXOs(
+      transaction.senderAddress,
+      transaction.transactionInputs,
+      transaction.transactionOutputs
+    );
+    if (!validUtxos) console.error('⛔ UTXOs received are not valid for recipient');
+
+    // return isValid && validUtxos;
+    return isValid;
   }
 
   /**
@@ -202,8 +217,8 @@ export default class Chain {
       }
 
       this.minerStatus = 'idle';
-      // TODO emit end-mine event
-      // TODO check for remaining transactions to mine
+      // emit end-mine event
+      // check for remaining transactions to mine
       this.checkForTransactionsToMine(broadcastBlock);
     }
   }
@@ -250,8 +265,12 @@ export default class Chain {
 
   /**
    * Create UTXOs chainState for received Chain instance
+   * Can only build UTXO Chain State if chain has >= 1 transactions
+   * and so it will include genesis UTXO
    */
-  createUTXOFromChain() {
+  createUTXOFromChain(chainState: ChainState) {
+    console.log('createUTXOFromChain');
+    this.chainState = chainState;
     this.chainState.clear();
     const spentTXOutputIds = new Set();
     const allOutputs = [];
@@ -273,17 +292,14 @@ export default class Chain {
 
   handleReceivedBlock(serializedBlock: Block) {
     const block = blockFromSerialized(serializedBlock);
+    // TODO validate it
     const { previousHash } = block;
 
+    // handles myReceived also(the one i broadcasted)
     if (this.blockExists(block)) {
       console.log('Received block that i already have');
       return true;
     }
-
-    // TODO handle myReceived also(the one i broadcasted)
-    // if i already have it's hash just ignore the broadcast
-
-    // TODO validate it
 
     const previousBlockIndex = this.chain.findIndex((block) => block.currentHash === previousHash);
     if (previousBlockIndex === -1) {
@@ -298,13 +314,16 @@ export default class Chain {
       // PUT DIFF ON CURRENT_TRANSACTIONS AND WORK LATER ON THEM
 
       // TODO validate new block
-      // TODO update my UTXOs
       const previousBlock = this.chain[previousBlockIndex];
       if (!this.validateBlock(previousBlock, block)) {
         console.error('❌Block is not valid');
         // return;
       }
       this.chain.push(block);
+      /**
+       * I would need only to update UTXOs for transactions inside VALID received blocks
+       * that were not somehow in my currentTransactions list, otherwise the UTXOs have been updated
+       */
 
       console.log('📥CASE1-RECEIVED VALID BLOCK');
       const minedTransactionIds = new Set(block.transactions.map((tr) => tr.transactionId));
@@ -316,7 +335,7 @@ export default class Chain {
       return true;
     } else {
       console.log('CASE2-RECEIVED FOR OLD BLOCK');
-      // TODO we can ignore this since we have a longer chain,
+      // we can ignore this since we have a longer chain,
       // UNLESS it comes after next-to-last block
       // Which would create a same length chain
       console.log(`I have ${this.chain.length} blocks in my chain`);
@@ -328,9 +347,4 @@ export default class Chain {
   blockExists(block: Block) {
     return this.chain.some((someBlock) => someBlock.currentHash === block.currentHash);
   }
-  /**
-   * TODO wallet_balance()
-   * Μπορούμενα βρούμε το υπόλοιπο οποιουδήποτε wallet προσθέτοντας όλα τα UTXOs που έχουν
-   * παραλήπτη το συγκεκριμένο wallet.
-   */
 }
