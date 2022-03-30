@@ -20,7 +20,7 @@ export default class Wallet {
     this.publicKey = keypair.publicKey;
   }
 
-  makeTransaction(amount: number, receiverAddress: string): Transaction {
+  createTransaction(amount: number, receiverAddress: string): Transaction {
     console.log(`Sending ${amount} 💰NBC💰 to receiver`);
     const transaction = new Transaction(this.publicKey, receiverAddress, amount);
     /**

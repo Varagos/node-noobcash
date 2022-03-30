@@ -217,8 +217,8 @@ export default class Chain {
       }
 
       this.minerStatus = 'idle';
-      // TODO emit end-mine event
-      // TODO check for remaining transactions to mine
+      // emit end-mine event
+      // check for remaining transactions to mine
       this.checkForTransactionsToMine(broadcastBlock);
     }
   }

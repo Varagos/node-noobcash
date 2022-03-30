@@ -1,4 +1,5 @@
 import net from 'net';
+import fs from 'fs/promises';
 import { Block, Chain, Transaction, Wallet } from '..';
 import {
   nodeInfo,
@@ -109,6 +110,9 @@ export default class BlockChainNode {
         if (!chainIsValid) throw new Error('Cannot validate received chain');
         this.chain = chain;
         console.log('validated chain!');
+        setTimeout(() => {
+          this.readAndExecuteMyTransactions();
+        }, 5 * 1000);
         break;
       case CODES.NEW_TRANSACTION:
         this.handleReceivedTransaction(message);
@@ -181,12 +185,12 @@ export default class BlockChainNode {
       socket.sendEndMessage(message, handleError);
     });
     socket.on('error', (error) => {
-      console.error(error);
+      console.error('Error sending message:', error);
     });
   }
 
   protected makeTransaction(amount: number, receiverAddress: string): void {
-    const transaction = this.myWallet.makeTransaction(amount, receiverAddress);
+    const transaction = this.myWallet.createTransaction(amount, receiverAddress);
     this.broadcastTransaction(transaction);
   }
 
@@ -196,7 +200,7 @@ export default class BlockChainNode {
   }
 
   protected async handleReceivedBlock(message: BlockMineFoundMessage) {
-    console.log('Received block');
+    console.log('I received a block!');
     if (!this.chain.handleReceivedBlock(message.block)) {
       await this.resolveConflict();
     }
@@ -252,14 +256,11 @@ export default class BlockChainNode {
 
   protected handleCliNewTransaction(socket: JsonSocket, message: CliNewTransactionMessage) {
     console.log('Received new transaction command');
-    // TODO
-    // Verify public key exists
     if (!this.nodes.some((node) => node.pk === message.recipientAddress)) {
       socket.sendEndMessage({ response: null, error: 'There is no node for provided recipientAddress' }, handleError);
       return;
     }
 
-    // TODO validate he has the UTXOs, perhaps inside makeTransaction?
     try {
       this.makeTransaction(message.amount, message.recipientAddress);
       socket.sendEndMessage({ response: 'Transaction broadcasted', error: null }, handleError);
@@ -285,5 +286,25 @@ export default class BlockChainNode {
       },
       handleError
     );
+  }
+
+  protected async readAndExecuteMyTransactions() {
+    console.log('readAndExecuteMyTransactions');
+    const data = await fs.readFile(__dirname + '/../../5nodes/transactions' + this.id + '.txt');
+    const arr = data.toString().replace(/\r\n/g, '\n').split('\n');
+    console.log('all IDS:', this.nodes);
+
+    const promises = arr.slice(0, -1).map(async (v, i) => {
+      const [idString, amount] = v.split(' ');
+      const id = idString.substring(2);
+      console.log(`ID:[${id}] => ${amount}`);
+    });
+    try {
+      await Promise.all(promises);
+    } catch (error) {
+      console.error('ERROR: one ore more transaction promises failed', error);
+    }
+
+    // console.log('../../5nodes/transactions' + this.id + '.txt');
   }
 }
