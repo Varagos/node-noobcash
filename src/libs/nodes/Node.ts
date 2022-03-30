@@ -52,7 +52,7 @@ export default class BlockChainNode {
       });
 
       socket.on('end', () => {
-        console.log('client disconnected');
+        // console.log('client disconnected');
       });
     });
 
@@ -194,9 +194,10 @@ export default class BlockChainNode {
     this.broadcastTransaction(transaction);
   }
 
-  protected handleReceivedTransaction(message: NewTransactionMessage) {
+  protected async handleReceivedTransaction(message: NewTransactionMessage) {
     console.log('Received transaction');
-    this.chain.addTransaction(message.transaction, this.broadcastBlock.bind(this));
+    await this.chain.addTransaction(message.transaction, this.broadcastBlock.bind(this));
+    console.log('Checking balance after received transaction, iAmReadyStatus', this.readyToMakeTransactions());
   }
 
   protected async handleReceivedBlock(message: BlockMineFoundMessage) {
@@ -292,12 +293,12 @@ export default class BlockChainNode {
     console.log('readAndExecuteMyTransactions');
     const data = await fs.readFile(__dirname + '/../../5nodes/transactions' + this.id + '.txt');
     const arr = data.toString().replace(/\r\n/g, '\n').split('\n');
-    console.log('all IDS:', this.nodes);
+    // console.log('all IDS:', this.nodes);
 
     const promises = arr.slice(0, -1).map(async (v, i) => {
       const [idString, amount] = v.split(' ');
       const id = idString.substring(2);
-      console.log(`ID:[${id}] => ${amount}`);
+      // console.log(`ID:[${id}] => ${amount}`);
     });
     try {
       await Promise.all(promises);
@@ -306,5 +307,10 @@ export default class BlockChainNode {
     }
 
     // console.log('../../5nodes/transactions' + this.id + '.txt');
+  }
+
+  protected readyToMakeTransactions(): boolean {
+    console.log('My walletBalance:', this.myWallet.myWalletBalance());
+    return this.myWallet.myWalletBalance() >= 100;
   }
 }

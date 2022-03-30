@@ -106,7 +106,7 @@ export default class Chain {
     this.chainState.addUnspentOutput(utxo);
 
     firstTransaction.transactionOutputs = [utxo];
-    console.log('First transaction', firstTransaction);
+    // console.log('First transaction', firstTransaction);
     const previousHash = '1';
     const genesisBlock = new Block(previousHash, [firstTransaction]);
     genesisBlock.nonce = 0;

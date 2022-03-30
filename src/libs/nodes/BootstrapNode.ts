@@ -28,7 +28,7 @@ export default class BootstrapNode extends Node {
   }
 
   override handleReceivedMessage(message: MessageType, socket: JsonSocket) {
-    console.log('BOOTSTRAP handleReceivedMessage');
+    // console.log('BOOTSTRAP handleReceivedMessage');
     switch (message.code) {
       case CODES.REGISTER:
         const { host, port, pk } = message;

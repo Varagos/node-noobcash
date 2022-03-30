@@ -22,7 +22,8 @@ export class ChainState {
     const { recipient } = transactionOutput;
     if (this.localStorage[recipient] === undefined) this.localStorage[recipient] = {};
     this.localStorage[recipient][transactionOutput.id] = transactionOutput;
-    console.log(`Added ${transactionOutput.amountTransferred} NBC to ${transactionOutput.recipient.substring(5, 10)}`);
+    console.log(`Added ${transactionOutput.amountTransferred} NBC to ${transactionOutput.recipient.substring(75, 90)}`);
+    // console.log('addedd xdxd', transactionOutput.recipient);
   }
 
   removeUnspentOutput(recipient: string, transactionOutputId: string) {
@@ -73,11 +74,11 @@ export class ChainState {
     // if not then they are invalid and the UTXOs are INVALID
 
     const recipientAvailableUTXOs = new Set(Object.keys(this.localStorage[recipient]));
-    console.log('Recipient has availableUTXOs', recipientAvailableUTXOs);
-    console.log(
-      'Requested UTXOs',
-      txIns.map((u) => u.previousOutputId)
-    );
+    // console.log('Recipient has availableUTXOs', recipientAvailableUTXOs);
+    // console.log(
+    //   'Requested UTXOs',
+    //   txIns.map((u) => u.previousOutputId)
+    // );
     for (const { previousOutputId } of txIns) {
       if (!recipientAvailableUTXOs.has(previousOutputId)) return false;
     }
@@ -93,6 +94,7 @@ export class ChainState {
   }
 
   walletBalance(walletAddress: string): number {
+    if (this.localStorage[walletAddress] === undefined) this.localStorage[walletAddress] = {};
     const walletUTXOs = Object.values(this.localStorage[walletAddress]);
     return walletUTXOs.reduce((previousValue, currentUTXO) => previousValue + currentUTXO.amountTransferred, 0);
   }

@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "start:dev": "nodemon src/server.ts",
+    "start:dev": "NODE_ENV=development nodemon src/server.ts",
+    "start:prod": "NODE_ENV=production node src/server.ts",
     "build": "rimraf dist && mkdir dist && tsc",
     "dev": "tsc -w & nodemon ."
   },
