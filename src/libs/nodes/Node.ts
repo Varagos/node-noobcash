@@ -306,11 +306,10 @@ export default class BlockChainNode {
       // console.log(`ID:[${id}] => ${amount}`);
       return this.makeTransaction(+amount, this.nodes[+id].pk);
     });
-    try {
-      await Promise.all(promises);
-    } catch (error) {
-      console.error('ERROR: one ore more transaction promises failed', error);
-    }
+    const values = await Promise.allSettled(promises);
+    values.forEach((value) => {
+      if (value.status === 'rejected') console.error('one ore more transaction promises failed', value.reason);
+    });
 
     // console.log('../../5nodes/transactions' + this.id + '.txt');
   }
