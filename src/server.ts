@@ -28,9 +28,10 @@ const config = YAML.parse(file);
 // console.log(config);
 
 const bootstrapNodeInfo = config.NODES[0];
+const totalNodes = 10;
 if (+index === 0) {
   // Create Bootstrap node
-  const bootstrapNode = new BootstrapNode(bootstrapNodeInfo, chainState);
+  const bootstrapNode = new BootstrapNode(bootstrapNodeInfo, chainState, totalNodes);
   bootstrapNode.setUpServerListener();
 } else {
   // Create Regular node
