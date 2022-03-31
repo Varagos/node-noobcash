@@ -1,3 +1,4 @@
+import { totalNodes } from './../../server';
 import net from 'net';
 import fs from 'fs/promises';
 import { Block, Chain, Transaction, Wallet } from '..';
@@ -296,7 +297,8 @@ export default class BlockChainNode {
 
   protected async readAndExecuteMyTransactions() {
     console.log('Starting execution of my transactions, my balance:', this.myWallet.myWalletBalance());
-    const data = await fs.readFile(__dirname + '/../../5nodes/transactions' + this.id + '.txt');
+    const filePath = totalNodes === 5 ? '/../../5nodes/transactions' : '/../../10nodes/transactions';
+    const data = await fs.readFile(__dirname + filePath + this.id + '.txt');
     const arr = data.toString().replace(/\r\n/g, '\n').split('\n');
     // console.log('all IDS:', this.nodes);
 

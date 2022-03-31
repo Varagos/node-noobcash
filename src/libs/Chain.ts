@@ -1,3 +1,4 @@
+import { totalNodes } from './../server';
 import * as crypto from 'crypto';
 import { v4 as uuid } from 'uuid';
 import fs from 'fs';
@@ -20,7 +21,7 @@ const DIFFICULTY = process.argv[4] ? +process.argv[4] : 5;
 console.log('Difficulty:', DIFFICULTY);
 
 const loggerStream = fs.createWriteStream(
-  __dirname + `/../../block-time${process.argv[2]}-cap[${CAPACITY}]-dif[${DIFFICULTY}].txt`,
+  __dirname + `/../../block-time${process.argv[2]}-cap[${CAPACITY}]-dif[${DIFFICULTY}]-nodes[${totalNodes}].txt`,
   { flags: 'a' }
 );
 /**
