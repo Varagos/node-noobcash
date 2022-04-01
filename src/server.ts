@@ -17,7 +17,8 @@ if (index === undefined) {
 }
 let fileName: string = 'group-view-local';
 
-export const totalNodes: number = 10;
+export const totalNodes: number = 5;
+
 if (process.env.NODE_ENV === 'production') {
   fileName = totalNodes === 5 ? 'group-view' : 'group-view-10';
 }

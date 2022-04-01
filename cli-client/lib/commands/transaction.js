@@ -22,12 +22,12 @@ const backend_json_1 = __importDefault(require("../backend.json"));
  *  two additional parameters which are the
  * parsed options and the command object itself.
  */
-const transaction = (recipientAddress, amount) => __awaiter(void 0, void 0, void 0, function* () {
+const transaction = (nodeId, amount) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Hello first command');
     // talk to my backend
     const message = {
         code: types_1.CODES.CLI_MAKE_NEW_TX,
-        recipientAddress,
+        nodeId,
         amount,
     };
     try {

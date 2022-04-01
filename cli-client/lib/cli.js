@@ -20,7 +20,7 @@ program.name('NBC-cli').version('0.0.1').description('A NBC cli client for commu
 program
     .command('t')
     .description('Send money to someone')
-    .argument('<recipient_address>', "recipient's wallet address") // The arguments may be <required> or [optional]
+    .argument('<recipient_node_id>', 'recipient node id') // The arguments may be <required> or [optional]
     .argument('<amount>', 'amount of NBC coins to send', parser_1.myParseInt)
     .action(transaction_1.transaction);
 program.command('view').description('View transactions of last valid block in the blockchain').action(view_1.view);

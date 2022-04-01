@@ -8,13 +8,13 @@ import backend from '../backend.json';
  *  two additional parameters which are the
  * parsed options and the command object itself.
  */
-export const transaction = async (recipientAddress: string, amount: number) => {
+export const transaction = async (nodeId: string, amount: number) => {
   console.log('Hello first command');
   // talk to my backend
 
   const message: CliNewTransactionMessage = {
     code: CODES.CLI_MAKE_NEW_TX,
-    recipientAddress,
+    nodeId,
     amount,
   };
   try {

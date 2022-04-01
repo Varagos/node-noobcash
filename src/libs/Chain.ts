@@ -21,7 +21,7 @@ const DIFFICULTY = process.argv[4] ? +process.argv[4] : 5;
 console.log('Difficulty:', DIFFICULTY);
 
 const loggerStream = fs.createWriteStream(
-  __dirname + `/../../block-time${process.argv[2]}-cap[${CAPACITY}]-dif[${DIFFICULTY}]-nodes[${totalNodes}].txt`,
+  __dirname + `/../../logs/block-time${process.argv[2]}-cap[${CAPACITY}]-dif[${DIFFICULTY}]-nodes[${totalNodes}].txt`,
   { flags: 'a' }
 );
 /**
@@ -101,10 +101,6 @@ export default class Chain {
     const castedChain = serializedChain.map((serializedBlock) => blockFromSerialized(serializedBlock));
     this.chain = castedChain;
     // console.log('this.chain:', this.chain);
-
-    // TODO  also cast currentTransactions ???
-    // if we are only interested in received chain we should perhaps clear
-    // current transactions received
   }
 
   private createGenesisBlock(receiverAddress: string, amount: number): Block {
@@ -237,7 +233,7 @@ export default class Chain {
     }
   }
 
-  // TODO checkValidity function for received blocks
+  // checkValidity function for received blocks
 
   /**
    * Αυτή η συνάρτηση καλείται από τους nodes κατά τη λήψη ενός νέου block (εκτός του genesis block).
@@ -258,7 +254,7 @@ export default class Chain {
     const padString = ''.padStart(DIFFICULTY, '0');
     // console.log('padString', padString);
     if (hashResult.substring(0, DIFFICULTY) === padString) return true;
-    // TODO (b)
+    // (b)
     return false;
   }
 
@@ -306,7 +302,7 @@ export default class Chain {
 
   handleReceivedBlock(serializedBlock: Block) {
     const block = blockFromSerialized(serializedBlock);
-    // TODO validate it
+    // validate it
     const { previousHash } = block;
 
     // handles myReceived also(the one i broadcasted)
@@ -327,7 +323,7 @@ export default class Chain {
       // STOP MY MINING - CHECK TRANSACTIONS OF RECEIVED - THE ONES I WAS MINING
       // PUT DIFF ON CURRENT_TRANSACTIONS AND WORK LATER ON THEM
 
-      // TODO validate new block
+      // validate new block
       const previousBlock = this.chain[previousBlockIndex];
       if (!this.validateBlock(previousBlock, block)) {
         console.error('❌Block is not valid');

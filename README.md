@@ -26,8 +26,6 @@ refs
 [3] What is Nonce? https://pintu.co.id/en/academy/post/what-is-nonce-and-mining-difficulty
 [4] https://www.youtube.com/watch?v=HneatE69814
 
-https://www.youtube.com/watch?v=qF7dkrce-mQ&t=1s
-
 <hr/>
 Cool package
 
@@ -46,4 +44,7 @@ while difficulty the number of required zeros for a successful mine.
 
 ```bash
 yarn start:dev <NODE_INDEX> [CAPACITY] [DIFFICULTY]
+
+# or
+sh test.sh [CAPACITY] [DIFFICULTY]
 ```

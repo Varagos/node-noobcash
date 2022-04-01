@@ -11,7 +11,7 @@ export enum CODES {
  */
 export type CliNewTransactionMessage = {
   code: CODES.CLI_MAKE_NEW_TX;
-  recipientAddress: string;
+  nodeId: string;
   amount: number;
 };
 

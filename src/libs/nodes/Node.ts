@@ -224,7 +224,6 @@ export default class BlockChainNode {
     socket.sendEndMessage(msg, handleError);
   }
 
-  // TODO resolve-conflict
   protected async resolveConflict() {
     console.log('💢 Conflict detected');
 
@@ -263,13 +262,13 @@ export default class BlockChainNode {
 
   protected handleCliNewTransaction(socket: JsonSocket, message: CliNewTransactionMessage) {
     console.log('Received new transaction command');
-    if (!this.nodes.some((node) => node.pk === message.recipientAddress)) {
-      socket.sendEndMessage({ response: null, error: 'There is no node for provided recipientAddress' }, handleError);
+    if (!this.nodes.some((node, index) => index === +message.nodeId)) {
+      socket.sendEndMessage({ response: null, error: 'There is no node for provided nodeId' }, handleError);
       return;
     }
 
     try {
-      this.makeTransaction(message.amount, message.recipientAddress);
+      this.makeTransaction(message.amount, this.nodes[+message.nodeId].pk);
       socket.sendEndMessage({ response: 'Transaction broadcasted', error: null }, handleError);
     } catch (error) {
       socket.sendEndMessage({ response: null, error }, handleError);
@@ -304,7 +303,7 @@ export default class BlockChainNode {
 
     const promises = arr.slice(0, -1).map(async (v, i) => {
       const [idString, amount] = v.split(' ');
-      const id = idString.substring(2);
+      const id: string = idString.substring(2);
       // console.log(`ID:[${id}] => ${amount}`);
       return this.makeTransaction(+amount, this.nodes[+id].pk);
     });
