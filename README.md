@@ -48,3 +48,6 @@ yarn start:dev <NODE_INDEX> [CAPACITY] [DIFFICULTY]
 # or
 sh test.sh [CAPACITY] [DIFFICULTY]
 ```
+
+## Roadmap
+- Replace setImmediate with new worker_threads module
