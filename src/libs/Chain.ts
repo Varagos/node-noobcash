@@ -1,29 +1,27 @@
-import { totalNodes } from './../server';
 import * as crypto from 'crypto';
 import { v4 as uuid } from 'uuid';
-import fs from 'fs';
 import { performance } from 'perf_hooks';
 import { blockFromSerialized, transactionFromSerialized } from './../utils/objectToClass';
 import { TransactionOutput } from './Transaction';
 import { ChainState } from './../services/ChainState';
 import { Transaction, Block } from '.';
 import { setImmediatePromise } from '../utils/sleep';
+import { FileLoggerService } from '../shared/log/loggerService';
 
 type MinerStatus = 'idle' | 'mining';
 type BroadCastBlock = (block: Block) => void;
+
+// const loggerStream = fs.createWriteStream(
+//   __dirname +
+//     `/../../logs/block-time${process.argv[2]}-cap[${CAPACITY}]-dif[${DIFFICULTY}]-nodes[${totalNodes ?? 5}].txt`,
+//   { flags: 'a' }
+// );
+
 /**
  * Number of transactions per block
  */
 const CAPACITY = process.argv[3] ? +process.argv[3] : 2;
-console.log('Capacity:', CAPACITY);
-
 const DIFFICULTY = process.argv[4] ? +process.argv[4] : 5;
-console.log('Difficulty:', DIFFICULTY);
-
-const loggerStream = fs.createWriteStream(
-  __dirname + `/../../logs/block-time${process.argv[2]}-cap[${CAPACITY}]-dif[${DIFFICULTY}]-nodes[${totalNodes}].txt`,
-  { flags: 'a' }
-);
 /**
  * There can only be a single Block chain
  * so we use the Singleton pattern
@@ -46,9 +44,12 @@ export default class Chain {
 
   breakMining: boolean = false;
 
+  loggerService: FileLoggerService;
+
   // Genesis block
   private constructor(chainState: ChainState, receiverAddress?: string, amount?: number) {
     this.chainState = chainState;
+    this.loggerService = FileLoggerService.getInstance();
 
     // If not bootstrap Node
     if (!receiverAddress || !amount) {
@@ -72,11 +73,16 @@ export default class Chain {
     return Chain._instance;
   }
 
+  set fileLoggerService(loggerService: FileLoggerService) {
+    this.loggerService = loggerService;
+  }
+
   public static initializeReceived(receivedChain: Chain, chainState: ChainState) {
     Chain._instance = Object.assign(new Chain(chainState), receivedChain);
 
     console.log('Received chain:', receivedChain);
     Chain._instance.castSerializedChain();
+    Chain._instance.fileLoggerService = FileLoggerService.getInstance();
     console.log(`Initializing chain with length:${Chain._instance.chain.length}`);
     console.log(`And block hash: ${Chain._instance.lastBlock.currentHash}`);
     Chain._instance.createUTXOFromChain(chainState);
@@ -223,7 +229,7 @@ export default class Chain {
         this.chain.push(newBlock);
         broadcastBlock(newBlock);
         const newBlockTs = performance.now();
-        loggerStream.write(newBlockTs + '\n');
+        this.loggerService.log(newBlockTs + '\n');
       }
 
       this.minerStatus = 'idle';
@@ -338,7 +344,7 @@ export default class Chain {
       console.log('📥CASE1-RECEIVED VALID BLOCK');
 
       const newBlockTs = performance.now();
-      loggerStream.write(newBlockTs + '\n');
+      this.loggerService.log(newBlockTs + '\n');
 
       const minedTransactionIds = new Set(block.transactions.map((tr) => tr.transactionId));
       if (this.miningBlock) this.transactionPool = this.transactionPool.concat(this.miningBlock.transactions);

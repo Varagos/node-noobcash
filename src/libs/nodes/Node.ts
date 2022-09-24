@@ -1,4 +1,4 @@
-import { totalNodes } from './../../server';
+import { totalNodes } from '../../shared/infra/http/server';
 import net from 'net';
 import fs from 'fs/promises';
 import { Block, Chain, Transaction, Wallet } from '..';
@@ -13,15 +13,16 @@ import {
   ChainsRequestMessage,
   CliNewTransactionMessage,
   ChainResponse,
+  InitializeChainMessage,
 } from './types';
 import JsonSocket from 'json-socket';
 import { handleError, requestChain } from '../../utils/sockets';
 import { ChainState } from '../../services/ChainState';
+import { MessageBus } from '../../shared/infra/message-bus/message-bus';
 
 /**
  * A node has a wallet-1 pk
  */
-// TODO complete class with basic functionalities
 export default class BlockChainNode {
   protected chain: Chain = Chain.instance;
   protected id?: number;
@@ -33,110 +34,103 @@ export default class BlockChainNode {
   constructor(
     private readonly bootstrapNodeInfo: nodeAddressInfo,
     protected readonly myInfo: nodeAddressInfo,
-    protected chainState: ChainState
+    protected chainState: ChainState,
+    protected messageBus: MessageBus
   ) {
     this.myWallet = new Wallet(chainState);
-  }
-
-  /** When all nodes are entered, receive broadcast from bootstrapNode,
-   * with ip/port/pk of every node in the system,
-   * also receive blockchain created, validate it, and
-   * from now on node is ready to make transactions
-   */
-  setUpServerListener() {
-    const { port } = this.myInfo;
-    const server = net.createServer();
-    server.listen(port);
-    server.on('connection', (netSocket) => {
-      const socket = new JsonSocket(netSocket);
-      socket.on('message', (message) => {
-        this.handleReceivedMessage(message, socket);
-      });
-
-      socket.on('end', () => {
-        // console.log('client disconnected');
-      });
-    });
-
-    server.on('error', (err) => {
-      console.log('❌ Server error ❌', err);
-      throw err;
-    });
   }
 
   /**
    * Send to bootstrap node ip address/port and my public key
    * and receive my id as response
    */
-  enterNodeToBlockChain() {
-    // inform bootstrap node with my address info
-    // receive my id from bootstrap node
-    const { port, host } = this.bootstrapNodeInfo;
-    const socket = new JsonSocket(new net.Socket());
-    socket.connect({ host, port });
-    socket.on('connect', () => {
-      const message: RegisterNodeMessage = {
-        code: CODES.REGISTER,
-        host: this.myInfo.host,
-        port: this.myInfo.port,
-        pk: this.myWallet.publicKey,
-      };
-      socket.sendMessage(message, handleError);
-      socket.on('message', (message) => {
-        console.log('I received id: ', message);
-        this.id = message.id;
-      });
-    });
-
-    socket.on('error', (error) => {
-      console.log('There was an error connecting to server', error);
-    });
-
-    socket.on('close', () => {
-      console.log('connection to bootstrap node closed');
-    });
+  async enterNodeToBlockChain() {
+    const message: RegisterNodeMessage = {
+      code: CODES.REGISTER,
+      host: this.myInfo.host,
+      port: this.myInfo.port,
+      pk: this.myWallet.publicKey,
+    };
+    const responseMessage = await this.messageBus.requestReply(message, this.bootstrapNodeInfo);
+    this.id = responseMessage.id;
   }
 
   /**
    * Receive all nodes list from bootstrap node
    * as well as blockChain so far
+   * ****************************************************
+   * When all nodes are entered, receive broadcast from bootstrapNode,
+   * with ip/port/pk of every node in the system,
+   * also receive blockchain created, validate it, and
+   * from now on node is ready to make transactions
    */
-  protected handleReceivedMessage(message: MessageType, socket: JsonSocket) {
-    switch (message.code) {
-      case CODES.INITIALIZE_CHAIN:
-        const { nodes, blockChain } = message;
-        this.nodes = nodes;
-        console.log('Received nodes from bootstrap', this.nodes);
-        const chain = Chain.initializeReceived(blockChain, this.chainState);
-        const chainIsValid = chain.validateChain();
-        if (!chainIsValid) throw new Error('Cannot validate received chain');
-        this.chain = chain;
-        console.log('validated chain!');
-        // setTimeout(() => {
-        //   this.readAndExecuteMyTransactions();
-        // }, 5 * 1000);
-        break;
-      case CODES.NEW_TRANSACTION:
-        this.handleReceivedTransaction(message);
-        break;
-      case CODES.BLOCK_FOUND:
-        this.handleReceivedBlock(message);
-        break;
-      case CODES.CHAINS_REQUEST:
-        this.handleChainsRequest(socket);
-        break;
-      case CODES.CLI_MAKE_NEW_TX:
-        this.handleCliNewTransaction(socket, message);
-        break;
-      case CODES.CLI_VIEW_LAST_TX:
-        this.handleViewLastTransactions(socket);
-        break;
-      case CODES.CLI_SHOW_BALANCE:
-        this.handleShowBalance(socket);
-        break;
-      default:
-        throw new Error(`unknown command ${message.code}`);
-    }
+  setUpServerListener() {
+    console.log('setting up server listener');
+    this.messageBus.subscribe(CODES.INITIALIZE_CHAIN, (message: any) => {
+      this.handleChainInitialization(message);
+    });
+    this.subscribeRegularNodeMessages();
+
+    // switch (message.code) {
+    //   case CODES.INITIALIZE_CHAIN:
+    //     this.handleChainInitialization(message);
+    //     break;
+    //   case CODES.NEW_TRANSACTION:
+    //     this.handleReceivedTransaction(message);
+    //     break;
+    //   case CODES.BLOCK_FOUND:
+    //     this.handleReceivedBlock(message);
+    //     break;
+    //   case CODES.CHAINS_REQUEST:
+    //     this.handleChainsRequest(socket);
+    //     break;
+    //   case CODES.CLI_MAKE_NEW_TX:
+    //     this.handleCliNewTransaction(message, socket);
+    //     break;
+    //   case CODES.CLI_VIEW_LAST_TX:
+    //     this.handleViewLastTransactions(socket);
+    //     break;
+    //   case CODES.CLI_SHOW_BALANCE:
+    //     this.handleShowBalance(socket);
+    //     break;
+    //   default:
+    //     throw new Error(`unknown command ${message.code}`);
+    // }
+  }
+
+  protected subscribeRegularNodeMessages() {
+    this.messageBus.subscribe(CODES.NEW_TRANSACTION, (message: any) => {
+      this.handleReceivedTransaction(message);
+    });
+    this.messageBus.subscribe(CODES.BLOCK_FOUND, (message: any) => {
+      this.handleReceivedBlock(message);
+    });
+    this.messageBus.subscribe(CODES.CHAINS_REQUEST, (message, socket) => {
+      this.handleChainsRequest(socket);
+    });
+    this.messageBus.subscribe(CODES.CLI_MAKE_NEW_TX, (message, socket) => {
+      this.handleCliNewTransaction(message, socket);
+    });
+    this.messageBus.subscribe(CODES.CLI_VIEW_LAST_TX, (message, socket) => {
+      this.handleViewLastTransactions(socket);
+    });
+    this.messageBus.subscribe(CODES.CLI_SHOW_BALANCE, (message, socket) => {
+      this.handleShowBalance(socket);
+    });
+  }
+
+  protected async handleChainInitialization(message: InitializeChainMessage) {
+    const { nodes, blockChain } = message;
+    this.nodes = nodes;
+    console.log('Received nodes from bootstrap', this.nodes);
+    const chain = Chain.initializeReceived(blockChain, this.chainState);
+    const chainIsValid = chain.validateChain();
+    if (!chainIsValid) throw new Error('Cannot validate received chain');
+    this.chain = chain;
+    console.log('validated chain!');
+    // setTimeout(() => {
+    //   this.readAndExecuteMyTransactions();
+    // }, 5 * 1000);
   }
 
   /** Broadcast transaction to all nodes */
@@ -173,22 +167,7 @@ export default class BlockChainNode {
    */
   protected broadcastMessage(message: MessageType) {
     console.log('Broadcasting message to', this.nodes.length, 'nodes');
-    for (const node of this.nodes) {
-      const { host, port } = node;
-      // console.log('Sending message to', host, port);
-      this.sendOneMessageToNode(host, port, message);
-    }
-  }
-
-  protected sendOneMessageToNode(host: string, port: number, message: MessageType) {
-    const socket = new JsonSocket(new net.Socket());
-    socket.connect(port, host);
-    socket.on('connect', () => {
-      socket.sendEndMessage(message, handleError);
-    });
-    socket.on('error', (error) => {
-      console.error('Error sending message:', error);
-    });
+    this.messageBus.publish(message, this.nodes);
   }
 
   protected makeTransaction(amount: number, receiverAddress: string): void {
@@ -260,7 +239,7 @@ export default class BlockChainNode {
     if (!chainReplaced) throw new Error('Could not resolve conflict - all chains were invalid');
   }
 
-  protected handleCliNewTransaction(socket: JsonSocket, message: CliNewTransactionMessage) {
+  protected handleCliNewTransaction(message: CliNewTransactionMessage, socket: JsonSocket) {
     console.log('Received new transaction command');
     if (!this.nodes.some((node, index) => index === +message.nodeId)) {
       socket.sendEndMessage({ response: null, error: 'There is no node for provided nodeId' }, handleError);
