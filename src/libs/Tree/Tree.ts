@@ -1,4 +1,4 @@
-import Block from '../Block';
+import Block from '../../core/domain/Block';
 
 /**
  * Each TreeNode is a Block

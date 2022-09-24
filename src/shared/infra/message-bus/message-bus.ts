@@ -1,6 +1,6 @@
 import JsonSocket from 'json-socket';
 import net from 'net';
-import { MessageType, nodeAddressInfo, nodeInfo } from '../../../libs/nodes/types';
+import { MessageType, nodeAddressInfo, nodeInfo } from '../../../core/domain/types';
 import { handleError } from '../../../utils/sockets';
 import { IMessageBus } from './message-bus.interface';
 

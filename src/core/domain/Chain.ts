@@ -1,12 +1,12 @@
 import * as crypto from 'crypto';
 import { v4 as uuid } from 'uuid';
 import { performance } from 'perf_hooks';
-import { blockFromSerialized, transactionFromSerialized } from './../utils/objectToClass';
+import { blockFromSerialized, transactionFromSerialized } from '../../utils/objectToClass';
 import { TransactionOutput } from './Transaction';
-import { ChainState } from './../services/ChainState';
+import { InMemChainState } from '../infra/chain-state/ChainState';
 import { Transaction, Block } from '.';
-import { setImmediatePromise } from '../utils/sleep';
-import { FileLoggerService } from '../shared/log/loggerService';
+import { setImmediatePromise } from '../../utils/sleep';
+import { FileLoggerService } from '../../shared/log/loggerService';
 
 type MinerStatus = 'idle' | 'mining';
 type BroadCastBlock = (block: Block) => void;
@@ -29,7 +29,7 @@ const DIFFICULTY = process.argv[4] ? +process.argv[4] : 5;
 export default class Chain {
   private static _instance: Chain;
 
-  private chainState: ChainState;
+  private chainState: InMemChainState;
 
   private minerStatus: MinerStatus = 'idle';
 
@@ -47,7 +47,7 @@ export default class Chain {
   loggerService: FileLoggerService;
 
   // Genesis block
-  private constructor(chainState: ChainState, receiverAddress?: string, amount?: number) {
+  private constructor(chainState: InMemChainState, receiverAddress?: string, amount?: number) {
     this.chainState = chainState;
     this.loggerService = FileLoggerService.getInstance();
 
@@ -66,7 +66,7 @@ export default class Chain {
     console.log('Initializing chain with genesis Block');
   }
 
-  public static initialize(receiverAddress: string, numberOfClients: number, chainState: ChainState) {
+  public static initialize(receiverAddress: string, numberOfClients: number, chainState: InMemChainState) {
     if (!Chain._instance) {
       Chain._instance = new Chain(chainState, receiverAddress, 100 * numberOfClients);
     }
@@ -77,7 +77,7 @@ export default class Chain {
     this.loggerService = loggerService;
   }
 
-  public static initializeReceived(receivedChain: Chain, chainState: ChainState) {
+  public static initializeReceived(receivedChain: Chain, chainState: InMemChainState) {
     Chain._instance = Object.assign(new Chain(chainState), receivedChain);
 
     console.log('Received chain:', receivedChain);
@@ -284,7 +284,7 @@ export default class Chain {
    * Can only build UTXO Chain State if chain has >= 1 transactions
    * and so it will include genesis UTXO
    */
-  createUTXOFromChain(chainState: ChainState) {
+  createUTXOFromChain(chainState: InMemChainState) {
     console.log('createUTXOFromChain');
     this.chainState = chainState;
     this.chainState.clear();

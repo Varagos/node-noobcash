@@ -1,7 +1,7 @@
-import { transaction } from './../../../cli-client/src/commands/transaction';
-import Chain from '../Chain';
-import Transaction from '../Transaction';
-import Block from '../Block';
+import { transaction } from '../../../cli-client/src/commands/transaction';
+import Chain from './Chain';
+import Transaction from './Transaction';
+import Block from './Block';
 
 export type nodeAddressInfo = {
   host: string;

@@ -1,21 +1,19 @@
 import fs from 'fs';
-const http = require('http');
 import path from 'path';
-import net from 'net';
 import YAML from 'yaml';
-import BootstrapNode from '../../../libs/nodes/BootstrapNode';
-import BlockChainNode from '../../../libs/nodes/Node';
-import { chainState } from '../../../services';
-import { ChainState } from '../../../services/ChainState';
+import { chainState } from '../../../core/infra';
+import { InMemChainState } from '../../../core/infra/chain-state/ChainState';
 import { MessageBus } from '../message-bus/message-bus';
+import BootstrapNode from '../../../core/infra/nodes/BootstrapNode';
+import BlockChainNode from '../../../core/infra/nodes/Node';
 
-const setupBootstrapNode = (bootstrapNodeInfo: any, chainState: ChainState, totalNodes: number) => {
+const setupBootstrapNode = (bootstrapNodeInfo: any, chainState: InMemChainState, totalNodes: number) => {
   const messageBus = new MessageBus(bootstrapNodeInfo);
   const bootstrapNode = new BootstrapNode(bootstrapNodeInfo, chainState, totalNodes, messageBus);
   bootstrapNode.setUpServerListener();
 };
 
-const setupRegularNode = (bootstrapNodeInfo: any, nodeInfo: any, chainState: ChainState) => {
+const setupRegularNode = (bootstrapNodeInfo: any, nodeInfo: any, chainState: InMemChainState) => {
   const messageBus = new MessageBus(nodeInfo);
   const node = new BlockChainNode(bootstrapNodeInfo, nodeInfo, chainState, messageBus);
   node.setUpServerListener();

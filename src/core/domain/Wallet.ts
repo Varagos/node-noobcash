@@ -1,11 +1,11 @@
 import * as crypto from 'crypto';
 import { Chain, Transaction } from '.';
-import { ChainState } from '../services/ChainState';
+import { InMemChainState } from '../infra/chain-state/ChainState';
 
 export default class Wallet {
   public publicKey: string;
   public privateKey: string;
-  constructor(private chainState: ChainState) {
+  constructor(private chainState: InMemChainState) {
     /** Generate using RSA(an encrypting algorithm)
      * we will use it to create a digital signature
      */

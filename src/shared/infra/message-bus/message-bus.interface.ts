@@ -1,5 +1,5 @@
 import JsonSocket from 'json-socket';
-import { MessageType, nodeAddressInfo, nodeInfo } from '../../../libs/nodes/types';
+import { MessageType, nodeAddressInfo, nodeInfo } from '../../../core/domain/types';
 
 export interface IMessageBus {
   subscribe(

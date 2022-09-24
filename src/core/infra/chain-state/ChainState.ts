@@ -1,5 +1,6 @@
-import { TransactionInput } from './../libs/Transaction';
-import { TransactionOutput } from '../libs/Transaction';
+import { IChainState } from './chain-state.interface';
+import { TransactionInput } from '../../domain/Transaction';
+import { TransactionOutput } from '../../domain/Transaction';
 
 type TransactionOutputId = string;
 type WalletAddress = string;
@@ -7,7 +8,7 @@ type WalletAddress = string;
 /**
  * Collection of all the UTXOs
  */
-export class ChainState {
+export class InMemChainState implements IChainState {
   localStorage: Record<WalletAddress, Record<TransactionOutputId, TransactionOutput>>;
 
   constructor() {

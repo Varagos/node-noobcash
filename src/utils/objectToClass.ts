@@ -1,6 +1,6 @@
-import { ChainState } from './../services/ChainState';
+import { InMemChainState } from '../core/infra/chain-state/ChainState';
 import { transaction } from './../../cli-client/src/commands/transaction';
-import { Block, Chain, Transaction } from '../libs';
+import { Block, Chain, Transaction } from '../core/domain';
 
 export const blockFromSerialized = (serializedBlock: Block): Block => {
   const { previousHash, transactions, timestamp } = serializedBlock;

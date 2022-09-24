@@ -1,7 +1,7 @@
-import { totalNodes } from '../../shared/infra/http/server';
+import { totalNodes } from '../../../shared/infra/http/server';
 import net from 'net';
 import fs from 'fs/promises';
-import { Block, Chain, Transaction, Wallet } from '..';
+import { Block, Chain, Transaction, Wallet } from '../../domain';
 import {
   nodeInfo,
   RegisterNodeMessage,
@@ -14,11 +14,11 @@ import {
   CliNewTransactionMessage,
   ChainResponse,
   InitializeChainMessage,
-} from './types';
+} from '../../domain/types';
 import JsonSocket from 'json-socket';
-import { handleError, requestChain } from '../../utils/sockets';
-import { ChainState } from '../../services/ChainState';
-import { MessageBus } from '../../shared/infra/message-bus/message-bus';
+import { handleError, requestChain } from '../../../utils/sockets';
+import { InMemChainState } from '../chain-state/ChainState';
+import { MessageBus } from '../../../shared/infra/message-bus/message-bus';
 
 /**
  * A node has a wallet-1 pk
@@ -34,7 +34,7 @@ export default class BlockChainNode {
   constructor(
     private readonly bootstrapNodeInfo: nodeAddressInfo,
     protected readonly myInfo: nodeAddressInfo,
-    protected chainState: ChainState,
+    protected chainState: InMemChainState,
     protected messageBus: MessageBus
   ) {
     this.myWallet = new Wallet(chainState);

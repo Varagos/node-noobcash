@@ -1,10 +1,17 @@
 import Node from './Node';
-import { nodeInfo, MessageType, nodeAddressInfo, CODES, InitializeChainMessage, RegisterNodeMessage } from './types';
+import {
+  nodeInfo,
+  MessageType,
+  nodeAddressInfo,
+  CODES,
+  InitializeChainMessage,
+  RegisterNodeMessage,
+} from '../../domain/types';
 import JsonSocket from 'json-socket';
-import { handleError } from '../../utils/sockets';
-import { Chain } from '..';
-import { ChainState } from '../../services/ChainState';
-import { MessageBus } from '../../shared/infra/message-bus/message-bus';
+import { handleError } from '../../../utils/sockets';
+import { Chain } from '../../domain';
+import { InMemChainState } from '../chain-state/ChainState';
+import { MessageBus } from '../../../shared/infra/message-bus/message-bus';
 
 /**
  * Overrides subscribeHandler of simpleNode,
@@ -17,7 +24,7 @@ export default class BootstrapNode extends Node {
    */
   constructor(
     myNodeAddressInfo: nodeAddressInfo,
-    chainState: ChainState,
+    chainState: InMemChainState,
     private totalExpectedNodes = 5,
     messageBus: MessageBus
   ) {

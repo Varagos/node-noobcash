@@ -1,6 +1,6 @@
 import JsonSocket from 'json-socket';
 import net from 'net';
-import { ChainResponse, ChainsRequestMessage } from '../libs/nodes/types';
+import { ChainResponse, ChainsRequestMessage } from '../core/domain/types';
 
 export const handleError = (error: unknown) => {
   // will be called after the message has been sent
