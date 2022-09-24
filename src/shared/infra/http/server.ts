@@ -9,39 +9,25 @@ import BlockChainNode from '../../../core/infra/nodes/Node';
 
 const setupBootstrapNode = (bootstrapNodeInfo: any, chainState: InMemChainState, totalNodes: number) => {
   const messageBus = new MessageBus(bootstrapNodeInfo);
-  const bootstrapNode = new BootstrapNode(bootstrapNodeInfo, chainState, totalNodes, messageBus);
-  bootstrapNode.setUpServerListener();
+  const node = new BootstrapNode(bootstrapNodeInfo, chainState, totalNodes, messageBus).setUpServerListener();
+
+  // setTimeout(() => {
+  //   node.readAndExecuteMyTransactions();
+  // }, 5 * 1000);
 };
 
 const setupRegularNode = (bootstrapNodeInfo: any, nodeInfo: any, chainState: InMemChainState) => {
   const messageBus = new MessageBus(nodeInfo);
-  const node = new BlockChainNode(bootstrapNodeInfo, nodeInfo, chainState, messageBus);
-  node.setUpServerListener();
-  node.enterNodeToBlockChain();
+  const node = new BlockChainNode(bootstrapNodeInfo, nodeInfo, chainState, messageBus)
+    .setUpServerListener()
+    .enterNodeToBlockChain();
+
+  // setTimeout(() => {
+  //   node.readAndExecuteMyTransactions();
+  // }, 5 * 1000);
 };
+import { config, bootstrapNodeInfo, totalNodes, index } from '../../config';
 
-const myArgs = process.argv.slice(2);
-console.log('myArgs', myArgs);
-const index = myArgs[0];
-if (index === undefined) {
-  console.error('Please provide node index');
-  process.exit(1);
-}
-let fileName: string = 'group-view-local';
-
-export const totalNodes: number = 5;
-
-if (process.env.NODE_ENV === 'production') {
-  fileName = totalNodes === 5 ? 'group-view' : 'group-view-10';
-}
-console.log('process.env', process.env.NODE_ENV);
-
-const file = fs.readFileSync(path.join(__dirname, `../../../../${fileName}.yaml`), { encoding: 'utf-8', flag: 'r' });
-const config = YAML.parse(file);
-// const port = index ? config.NODES[+index].port : 5000;
-// console.log(config);
-
-const bootstrapNodeInfo = config.NODES[0];
 if (+index === 0) {
   // Create Bootstrap node
 

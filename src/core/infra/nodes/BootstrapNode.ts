@@ -39,7 +39,7 @@ export default class BootstrapNode extends Node {
     this.id = 0;
   }
 
-  override setUpServerListener(): void {
+  override setUpServerListener(): this {
     this.messageBus.subscribe(CODES.REGISTER, (message, socket) => {
       this.handleNodeRegister(message, socket);
     });
@@ -70,6 +70,7 @@ export default class BootstrapNode extends Node {
     //   default:
     //     throw new Error(`unknown command ${message.code}`);
     // }
+    return this;
   }
 
   private handleNodeRegister(message: RegisterNodeMessage, socket: JsonSocket) {
@@ -86,10 +87,6 @@ export default class BootstrapNode extends Node {
       setTimeout(() => {
         this.transferCoinsToNodes(allNodesExceptMe);
       }, 2000);
-
-      // setTimeout(() => {
-      //   this.readAndExecuteMyTransactions();
-      // }, 5 * 1000);
     }
   }
 

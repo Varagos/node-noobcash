@@ -1,5 +1,3 @@
-import { totalNodes } from '../../../shared/infra/http/server';
-import net from 'net';
 import fs from 'fs/promises';
 import { Block, Chain, Transaction, Wallet } from '../../domain';
 import {
@@ -19,6 +17,7 @@ import JsonSocket from 'json-socket';
 import { handleError, requestChain } from '../../../utils/sockets';
 import { InMemChainState } from '../chain-state/ChainState';
 import { MessageBus } from '../../../shared/infra/message-bus/message-bus';
+import { totalNodes } from '../../../shared/config';
 
 /**
  * A node has a wallet-1 pk
@@ -53,6 +52,7 @@ export default class BlockChainNode {
     };
     const responseMessage = await this.messageBus.requestReply(message, this.bootstrapNodeInfo);
     this.id = responseMessage.id;
+    return this;
   }
 
   /**
@@ -96,6 +96,7 @@ export default class BlockChainNode {
     //   default:
     //     throw new Error(`unknown command ${message.code}`);
     // }
+    return this;
   }
 
   protected subscribeRegularNodeMessages() {
@@ -128,9 +129,6 @@ export default class BlockChainNode {
     if (!chainIsValid) throw new Error('Cannot validate received chain');
     this.chain = chain;
     console.log('validated chain!');
-    // setTimeout(() => {
-    //   this.readAndExecuteMyTransactions();
-    // }, 5 * 1000);
   }
 
   /** Broadcast transaction to all nodes */
