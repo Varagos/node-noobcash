@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../packages/cli/dist",
+    "rootDir": "../packages/cli/src",
+    "module": "commonjs",
+    "target": "ES2017",
+    "sourceMap": true,
+    "declaration": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}

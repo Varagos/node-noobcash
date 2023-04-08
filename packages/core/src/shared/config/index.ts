@@ -18,7 +18,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 console.log('process.env', process.env.NODE_ENV);
 
-const file = fs.readFileSync(path.join(__dirname, `../../../../${fileName}.yaml`), { encoding: 'utf-8', flag: 'r' });
+const file = fs.readFileSync(path.join(__dirname, `../../../${fileName}.yaml`), { encoding: 'utf-8', flag: 'r' });
 const config = YAML.parse(file);
 // const port = index ? config.NODES[+index].port : 5000;
 // console.log(config);

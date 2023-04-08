@@ -69,7 +69,10 @@ export class MessageBus implements IMessageBus {
       return;
     }
     // TODO Better wrap sendEndMessage of sockets
-    await handler(message, socket);
+    const reply = await handler(message, socket);
+    if (reply) {
+      socket.sendEndMessage(reply, handleError);
+    }
   }
 
   async subscribe(

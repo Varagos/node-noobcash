@@ -40,8 +40,8 @@ export default class BootstrapNode extends Node {
   }
 
   override setUpServerListener(): this {
-    this.messageBus.subscribe(CODES.REGISTER, (message, socket) => {
-      this.handleNodeRegister(message, socket);
+    this.messageBus.subscribe(CODES.REGISTER, (message) => {
+      return this.handleNodeRegister(message);
     });
     this.subscribeRegularNodeMessages();
     // console.log('BOOTSTRAP handleReceivedMessage');
@@ -73,12 +73,11 @@ export default class BootstrapNode extends Node {
     return this;
   }
 
-  private handleNodeRegister(message: RegisterNodeMessage, socket: JsonSocket) {
+  private handleNodeRegister(message: RegisterNodeMessage) {
     const { host, port, pk } = message;
     this.nodes.push({ host, port, pk });
     const nodeIndex = this.nodes.length - 1;
     const response = { id: nodeIndex };
-    socket.sendEndMessage(response, handleError);
 
     if (this.isFinalNode(nodeIndex)) {
       console.log('all nodes entered!');
@@ -88,6 +87,7 @@ export default class BootstrapNode extends Node {
         this.transferCoinsToNodes(allNodesExceptMe);
       }, 2000);
     }
+    return response;
   }
 
   // sends to each node, info of all Nodes

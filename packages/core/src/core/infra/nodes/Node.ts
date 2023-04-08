@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import path from 'path';
 import { Block, Chain, Transaction, Wallet } from '../../domain';
 import {
   nodeInfo,
@@ -16,8 +17,8 @@ import {
 import JsonSocket from 'json-socket';
 import { handleError, requestChain } from '../../../utils/sockets';
 import { InMemChainState } from '../chain-state/ChainState';
-import { MessageBus } from '../../../shared/infra/message-bus/message-bus';
 import { totalNodes } from '../../../shared/config';
+import { IMessageBus } from '../../../shared/infra/message-bus/message-bus.interface';
 
 /**
  * A node has a wallet-1 pk
@@ -34,7 +35,7 @@ export default class BlockChainNode {
     private readonly bootstrapNodeInfo: nodeAddressInfo,
     protected readonly myInfo: nodeAddressInfo,
     protected chainState: InMemChainState,
-    protected messageBus: MessageBus
+    protected messageBus: IMessageBus
   ) {
     this.myWallet = new Wallet(chainState);
   }
@@ -70,32 +71,6 @@ export default class BlockChainNode {
       this.handleChainInitialization(message);
     });
     this.subscribeRegularNodeMessages();
-
-    // switch (message.code) {
-    //   case CODES.INITIALIZE_CHAIN:
-    //     this.handleChainInitialization(message);
-    //     break;
-    //   case CODES.NEW_TRANSACTION:
-    //     this.handleReceivedTransaction(message);
-    //     break;
-    //   case CODES.BLOCK_FOUND:
-    //     this.handleReceivedBlock(message);
-    //     break;
-    //   case CODES.CHAINS_REQUEST:
-    //     this.handleChainsRequest(socket);
-    //     break;
-    //   case CODES.CLI_MAKE_NEW_TX:
-    //     this.handleCliNewTransaction(message, socket);
-    //     break;
-    //   case CODES.CLI_VIEW_LAST_TX:
-    //     this.handleViewLastTransactions(socket);
-    //     break;
-    //   case CODES.CLI_SHOW_BALANCE:
-    //     this.handleShowBalance(socket);
-    //     break;
-    //   default:
-    //     throw new Error(`unknown command ${message.code}`);
-    // }
     return this;
   }
 
@@ -106,17 +81,17 @@ export default class BlockChainNode {
     this.messageBus.subscribe(CODES.BLOCK_FOUND, (message: any) => {
       this.handleReceivedBlock(message);
     });
-    this.messageBus.subscribe(CODES.CHAINS_REQUEST, (message, socket) => {
-      this.handleChainsRequest(socket);
+    this.messageBus.subscribe(CODES.CHAINS_REQUEST, (message) => {
+      return this.handleChainsRequest();
     });
-    this.messageBus.subscribe(CODES.CLI_MAKE_NEW_TX, (message, socket) => {
-      this.handleCliNewTransaction(message, socket);
+    this.messageBus.subscribe(CODES.CLI_MAKE_NEW_TX, (message) => {
+      return this.handleCliNewTransaction(message);
     });
-    this.messageBus.subscribe(CODES.CLI_VIEW_LAST_TX, (message, socket) => {
-      this.handleViewLastTransactions(socket);
+    this.messageBus.subscribe(CODES.CLI_VIEW_LAST_TX, (message) => {
+      return this.handleViewLastTransactions();
     });
-    this.messageBus.subscribe(CODES.CLI_SHOW_BALANCE, (message, socket) => {
-      this.handleShowBalance(socket);
+    this.messageBus.subscribe(CODES.CLI_SHOW_BALANCE, (message) => {
+      return this.handleShowBalance();
     });
   }
 
@@ -195,10 +170,10 @@ export default class BlockChainNode {
     // }
   }
 
-  protected handleChainsRequest(socket: JsonSocket) {
+  protected handleChainsRequest() {
     console.log('ChainsRequest');
     const msg: ChainResponse = { blockChain: this.chain };
-    socket.sendEndMessage(msg, handleError);
+    return msg;
   }
 
   protected async resolveConflict() {
@@ -237,44 +212,44 @@ export default class BlockChainNode {
     if (!chainReplaced) throw new Error('Could not resolve conflict - all chains were invalid');
   }
 
-  protected handleCliNewTransaction(message: CliNewTransactionMessage, socket: JsonSocket) {
+  protected handleCliNewTransaction(message: CliNewTransactionMessage) {
     console.log('Received new transaction command');
     if (!this.nodes.some((node, index) => index === +message.nodeId)) {
-      socket.sendEndMessage({ response: null, error: 'There is no node for provided nodeId' }, handleError);
-      return;
+      return { response: null, error: 'There is no node for provided nodeId' };
     }
 
     try {
       this.makeTransaction(message.amount, this.nodes[+message.nodeId].pk);
-      socket.sendEndMessage({ response: 'Transaction broadcasted', error: null }, handleError);
+      return { response: 'Transaction broadcasted', error: null };
     } catch (error) {
-      socket.sendEndMessage({ response: null, error }, handleError);
+      return { response: null, error };
     }
   }
 
-  protected handleViewLastTransactions(socket: JsonSocket) {
+  protected handleViewLastTransactions() {
     console.log('handle view last transactions');
 
     const lastTransactions = this.chain.lastBlock.transactions;
-    socket.sendEndMessage({ response: lastTransactions, error: null }, handleError);
+    return { response: lastTransactions, error: null };
   }
 
-  protected handleShowBalance(socket: JsonSocket) {
+  protected handleShowBalance() {
     console.log('Handle show balance');
 
-    socket.sendEndMessage(
-      {
-        response: this.myWallet.myWalletBalance(),
-        // chainState: this.chainState.localStorage
-      },
-      handleError
-    );
+    return {
+      response: this.myWallet.myWalletBalance(),
+      // chainState: this.chainState.localStorage
+    };
   }
 
   protected async readAndExecuteMyTransactions() {
     console.log('Starting execution of my transactions, my balance:', this.myWallet.myWalletBalance());
-    const filePath = totalNodes === 5 ? '/../../5nodes/transactions' : '/../../10nodes/transactions';
-    const data = await fs.readFile(__dirname + filePath + this.id + '.txt');
+    const txDirPath = totalNodes === 5 ? '../../../5nodes/transactions' : '../../../10nodes/transactions';
+
+    const normalizedPath = path.join(__dirname, txDirPath + this.id + '.txt');
+    console.log('__dirname', __dirname);
+    console.log('normalizedPath', normalizedPath);
+    const data = await fs.readFile(normalizedPath);
     const arr = data.toString().replace(/\r\n/g, '\n').split('\n');
     // console.log('all IDS:', this.nodes);
 

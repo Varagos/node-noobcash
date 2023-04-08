@@ -80,7 +80,7 @@ export default class Chain {
   public static initializeReceived(receivedChain: Chain, chainState: InMemChainState) {
     Chain._instance = Object.assign(new Chain(chainState), receivedChain);
 
-    console.log('Received chain:', receivedChain);
+    console.log('[initializeReceived]: Received chain:, ');
     Chain._instance.castSerializedChain();
     Chain._instance.fileLoggerService = FileLoggerService.getInstance();
     console.log(`Initializing chain with length:${Chain._instance.chain.length}`);
