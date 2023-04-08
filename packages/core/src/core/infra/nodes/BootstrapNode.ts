@@ -44,32 +44,6 @@ export default class BootstrapNode extends Node {
       return this.handleNodeRegister(message);
     });
     this.subscribeRegularNodeMessages();
-    // console.log('BOOTSTRAP handleReceivedMessage');
-    // switch (message.code) {
-    //   case CODES.REGISTER:
-    //     this.handleNodeRegister(message, socket);
-    //     break;
-    //   case CODES.NEW_TRANSACTION:
-    //     this.handleReceivedTransaction(message);
-    //     break;
-    //   case CODES.BLOCK_FOUND:
-    //     this.handleReceivedBlock(message);
-    //     break;
-    //   case CODES.CHAINS_REQUEST:
-    //     this.handleChainsRequest(socket);
-    //     break;
-    //   case CODES.CLI_MAKE_NEW_TX:
-    //     this.handleCliNewTransaction(message, socket);
-    //     break;
-    //   case CODES.CLI_VIEW_LAST_TX:
-    //     this.handleViewLastTransactions(socket);
-    //     break;
-    //   case CODES.CLI_SHOW_BALANCE:
-    //     this.handleShowBalance(socket);
-    //     break;
-    //   default:
-    //     throw new Error(`unknown command ${message.code}`);
-    // }
     return this;
   }
 

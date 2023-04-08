@@ -19,6 +19,12 @@ import { handleError, requestChain } from '../../../utils/sockets';
 import { InMemChainState } from '../chain-state/ChainState';
 import { totalNodes } from '../../../shared/config';
 import { IMessageBus } from '../../../shared/infra/message-bus/message-bus.interface';
+import { ShowWalletBalanceHandler } from '../../application/show-wallet-balance/show-wallet-balance.handler';
+import { ViewLastTransactionsHandler } from '../../application/view-last-transactions/view-last-transactions.handler';
+import { MakeNewTransactionHandler } from '../../application/make-transaction/make-transaction.handler';
+import { ReceiveBlockHandler } from '../../application/receive-block/receive-block.handler';
+import { ReceiveTransactionHandler } from '../../application/receive-transaction/receive-transaction.handler';
+import { GetChainHandler } from '../../application/get-chain/get-chain.handler';
 
 /**
  * A node has a wallet-1 pk
@@ -28,7 +34,7 @@ export default class BlockChainNode {
   protected id?: number;
   protected nodes: nodeInfo[] = [];
   protected myWallet: Wallet;
-  protected executedTXs: boolean = false;
+  private executedTXs: boolean = false;
 
   // TODO keep list with all nodes in order to interchange msgs
   constructor(
@@ -67,32 +73,64 @@ export default class BlockChainNode {
    */
   setUpServerListener() {
     console.log('setting up server listener');
-    this.messageBus.subscribe(CODES.INITIALIZE_CHAIN, (message: any) => {
-      this.handleChainInitialization(message);
+    this.messageBus.subscribe(CODES.INITIALIZE_CHAIN, async (message: any) => {
+      await this.handleChainInitialization(message);
+      // We subscribe to regular messages after we have the chain
+      this.subscribeRegularNodeMessages();
     });
-    this.subscribeRegularNodeMessages();
     return this;
   }
 
   protected subscribeRegularNodeMessages() {
-    this.messageBus.subscribe(CODES.NEW_TRANSACTION, (message: any) => {
-      this.handleReceivedTransaction(message);
-    });
-    this.messageBus.subscribe(CODES.BLOCK_FOUND, (message: any) => {
-      this.handleReceivedBlock(message);
-    });
-    this.messageBus.subscribe(CODES.CHAINS_REQUEST, (message) => {
-      return this.handleChainsRequest();
-    });
-    this.messageBus.subscribe(CODES.CLI_MAKE_NEW_TX, (message) => {
-      return this.handleCliNewTransaction(message);
-    });
-    this.messageBus.subscribe(CODES.CLI_VIEW_LAST_TX, (message) => {
-      return this.handleViewLastTransactions();
-    });
-    this.messageBus.subscribe(CODES.CLI_SHOW_BALANCE, (message) => {
-      return this.handleShowBalance();
-    });
+    console.log('subscribing this chain is::', this.chain);
+    const receiveTransactionHandler = new ReceiveTransactionHandler(
+      this.chain,
+      this.nodes,
+      this.messageBus,
+      this.chainState
+    );
+    /**
+     * Receive transaction from other nodes
+     */
+    this.messageBus.subscribe(CODES.NEW_TRANSACTION, receiveTransactionHandler.handle.bind(receiveTransactionHandler));
+    /**
+     * Receive block from other nodes
+     */
+    const receiveBlockHandler = new ReceiveBlockHandler(
+      this.chain,
+      this.myWallet,
+      this.nodes,
+      this.messageBus,
+      this.chainState
+    );
+    this.messageBus.subscribe(CODES.BLOCK_FOUND, receiveBlockHandler.handle.bind(receiveBlockHandler));
+
+    /**
+     * Receive request for chain
+     */
+    const getChainHandler = new GetChainHandler(this.chain);
+    this.messageBus.subscribe(CODES.CHAINS_REQUEST, getChainHandler.handle.bind(getChainHandler));
+
+    /**
+     * Receive request to make new transaction
+     */
+    const makeNewTransactionHandler = new MakeNewTransactionHandler(this.myWallet, this.nodes, this.messageBus);
+    this.messageBus.subscribe(CODES.CLI_MAKE_NEW_TX, makeNewTransactionHandler.handle.bind(makeNewTransactionHandler));
+
+    /**
+     * Receive request to view last transactions
+     */
+    const viewLastTransactionsHandler = new ViewLastTransactionsHandler(this.chain);
+    this.messageBus.subscribe(
+      CODES.CLI_VIEW_LAST_TX,
+      viewLastTransactionsHandler.handle.bind(viewLastTransactionsHandler)
+    );
+
+    /**
+     * Receive request to show wallet balance
+     */
+    const showWalletBalanceHandler = new ShowWalletBalanceHandler(this.myWallet);
+    this.messageBus.subscribe(CODES.CLI_SHOW_BALANCE, showWalletBalanceHandler.handle.bind(showWalletBalanceHandler));
   }
 
   protected async handleChainInitialization(message: InitializeChainMessage) {
@@ -104,31 +142,6 @@ export default class BlockChainNode {
     if (!chainIsValid) throw new Error('Cannot validate received chain');
     this.chain = chain;
     console.log('validated chain!');
-  }
-
-  /** Broadcast transaction to all nodes */
-
-  /** Receive broadcasted transaction,
-   * verify it using validateTransaction
-   */
-
-  // conflict-resolve https://www.geeksforgeeks.org/blockchain-resolving-conflicts/
-
-  protected broadcastTransaction(transaction: Transaction) {
-    const message: NewTransactionMessage = {
-      code: CODES.NEW_TRANSACTION,
-      transaction,
-    };
-    this.broadcastMessage(message);
-  }
-
-  protected broadcastBlock(block: Block) {
-    console.log('Broadcasting block!');
-    const message: BlockMineFoundMessage = {
-      code: CODES.BLOCK_FOUND,
-      block,
-    };
-    this.broadcastMessage(message);
   }
 
   /**
@@ -143,103 +156,10 @@ export default class BlockChainNode {
     this.messageBus.publish(message, this.nodes);
   }
 
-  protected makeTransaction(amount: number, receiverAddress: string): void {
-    const transaction = this.myWallet.createTransaction(amount, receiverAddress);
-    this.broadcastTransaction(transaction);
-  }
-
-  protected async handleReceivedTransaction(message: NewTransactionMessage) {
-    console.log('Received transaction');
-    await this.chain.addTransaction(message.transaction, this.broadcastBlock.bind(this));
-    // console.log('Checking balance after received transaction, iAmReadyStatus', this.readyToMakeTransactions());
-    if (this.executedTXs === false && this.readyToMakeTransactions()) {
-      this.executedTXs = true;
-      await this.readAndExecuteMyTransactions();
-    }
-  }
-
-  protected async handleReceivedBlock(message: BlockMineFoundMessage) {
-    console.log('I received a block!');
-    if (!this.chain.handleReceivedBlock(message.block)) {
-      await this.resolveConflict();
-    }
-    // console.log('MY ID IS:', this.id);
-    // if (this.id == 0) {
-    //   console.log('I AM NODE ZERO');
-    //   await this.resolveConflict();
-    // }
-  }
-
-  protected handleChainsRequest() {
-    console.log('ChainsRequest');
-    const msg: ChainResponse = { blockChain: this.chain };
-    return msg;
-  }
-
-  protected async resolveConflict() {
-    console.log('💢 Conflict detected');
-
-    const message: ChainsRequestMessage = {
-      code: CODES.CHAINS_REQUEST,
-    };
-
-    // ask remaining nodes for their chain, and keep longest valid
-    const otherNodes = this.nodes.filter((node) => node.pk !== this.myWallet.publicKey);
-    const chains = await Promise.all(otherNodes.map((node) => requestChain(node.host, node.port, message)));
-    console.log('Received chains from other nodes', chains);
-
-    const sortedChains = chains.sort((a, b) => {
-      if (a.blockChain.chain.length > b.blockChain.chain.length) return -1;
-      if (a.blockChain.chain.length < b.blockChain.chain.length) return 1;
-      return 0;
-    });
-    // console.log(
-    //   'sortedChain lengths',
-    //   sortedChains.map((x) => x.blockChain.chain.length)
-    // );
-    chains[0].blockChain.chain.length;
-    let chainReplaced = false;
-    for (const { blockChain } of sortedChains) {
-      const chain = Chain.initializeReceived(blockChain, this.chainState);
-      const chainIsValid = chain.validateChain();
-      if (chainIsValid) {
-        console.log('validated chain-resolved conflict');
-        this.chain = chain;
-        chainReplaced = true;
-        break;
-      }
-    }
-    if (!chainReplaced) throw new Error('Could not resolve conflict - all chains were invalid');
-  }
-
-  protected handleCliNewTransaction(message: CliNewTransactionMessage) {
-    console.log('Received new transaction command');
-    if (!this.nodes.some((node, index) => index === +message.nodeId)) {
-      return { response: null, error: 'There is no node for provided nodeId' };
-    }
-
-    try {
-      this.makeTransaction(message.amount, this.nodes[+message.nodeId].pk);
-      return { response: 'Transaction broadcasted', error: null };
-    } catch (error) {
-      return { response: null, error };
-    }
-  }
-
-  protected handleViewLastTransactions() {
-    console.log('handle view last transactions');
-
-    const lastTransactions = this.chain.lastBlock.transactions;
-    return { response: lastTransactions, error: null };
-  }
-
-  protected handleShowBalance() {
-    console.log('Handle show balance');
-
-    return {
-      response: this.myWallet.myWalletBalance(),
-      // chainState: this.chainState.localStorage
-    };
+  protected async makeTransaction(amount: number, recipient: string) {
+    const index = this.nodes.findIndex((node) => node.pk === recipient);
+    const handler = new MakeNewTransactionHandler(this.myWallet, this.nodes, this.messageBus);
+    return handler.handle({ amount, nodeId: index.toString(), code: CODES.CLI_MAKE_NEW_TX });
   }
 
   protected async readAndExecuteMyTransactions() {
@@ -257,6 +177,7 @@ export default class BlockChainNode {
       const [idString, amount] = v.split(' ');
       const id: string = idString.substring(2);
       // console.log(`ID:[${id}] => ${amount}`);
+
       return this.makeTransaction(+amount, this.nodes[+id].pk);
     });
     const values = await Promise.allSettled(promises);
