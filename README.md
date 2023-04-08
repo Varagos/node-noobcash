@@ -1,13 +1,6 @@
 ## Get started
 
-To install yarn do
-
-```
-npm install -g yarn
-```
-
 ```bash
-# to use yarn, npm install yarn -g
 yarn install # or npm install
 
 # Start bootstrap node
@@ -50,4 +43,5 @@ sh test.sh [CAPACITY] [DIFFICULTY]
 ```
 
 ## Roadmap
+
 - Replace setImmediate with new worker_threads module
